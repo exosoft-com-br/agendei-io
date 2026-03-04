@@ -1,6 +1,3 @@
--- Adicionar campos CEP e bairro na tabela negocios
-ALTER TABLE negocios ADD COLUMN IF NOT EXISTS cep VARCHAR(8);
+-- Adicionar campo bairro na tabela negocios
+-- (CEP é usado apenas para busca de endereço via ViaCEP, não é salvo no banco)
 ALTER TABLE negocios ADD COLUMN IF NOT EXISTS bairro VARCHAR(200);
-
--- Índice para busca por CEP
-CREATE INDEX IF NOT EXISTS idx_negocios_cep ON negocios(cep);

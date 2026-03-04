@@ -192,7 +192,7 @@
       <!-- CEP + Endereço -->
       <div class="form-row">
         <div class="form-group">
-          <label>CEP <span id="nCepStatus"></span></label>
+          <label>CEP (busca endereço) <span id="nCepStatus"></span></label>
           <input type="text" id="nCep" placeholder="00000-000" maxlength="9" oninput="formatarCep(this)" onblur="buscarCep('n')">
         </div>
         <div class="form-group">
@@ -569,7 +569,6 @@
       const bairro = n.bairro || '';
       const cidade = n.cidade || '';
       const estado = n.estado || '';
-      const cep = n.cep || '';
       const ativo = n.ativo !== false;
       const id = n.id || '';
       const desc = n.descricao || '';
@@ -578,7 +577,6 @@
       let endCompleto = [end, bairro].filter(Boolean).join(', ');
       if (cidade) endCompleto += (endCompleto ? ' — ' : '') + cidade;
       if (estado) endCompleto += '/' + estado;
-      if (cep) endCompleto += ' · CEP: ' + cep;
 
       return `
         <div class="negocio-card" id="negocio-${idx}">
@@ -629,8 +627,8 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>CEP <span id="e${idx}CepStatus"></span></label>
-          <input type="text" id="e${idx}Cep" value="${n.cep || ''}" maxlength="9" oninput="formatarCep(this)" onblur="buscarCep('e${idx}')">
+          <label>CEP (busca endereço) <span id="e${idx}CepStatus"></span></label>
+          <input type="text" id="e${idx}Cep" value="" maxlength="9" oninput="formatarCep(this)" onblur="buscarCep('e${idx}')">
         </div>
         <div class="form-group">
           <label>Endereço</label>
@@ -667,7 +665,6 @@
         descricao: document.getElementById(`e${idx}Desc`).value.trim(),
         telefoneComercial: document.getElementById(`e${idx}Tel`).value.trim(),
         cnpjCpf: document.getElementById(`e${idx}Cnpj`).value.trim(),
-        cep: document.getElementById(`e${idx}Cep`).value.replace(/\D/g, ''),
         endereco: document.getElementById(`e${idx}Endereco`).value.trim(),
         bairro: document.getElementById(`e${idx}Bairro`).value.trim(),
         cidade: document.getElementById(`e${idx}Cidade`).value.trim(),
@@ -696,7 +693,6 @@
         descricao: document.getElementById('nDescricao').value.trim(),
         telefoneComercial: document.getElementById('nTelefone').value.trim(),
         cnpjCpf: document.getElementById('nCnpjCpf').value.trim(),
-        cep: document.getElementById('nCep').value.replace(/\D/g, ''),
         endereco: document.getElementById('nEndereco').value.trim(),
         bairro: document.getElementById('nBairro').value.trim(),
         cidade: document.getElementById('nCidade').value.trim(),

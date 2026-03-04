@@ -22,7 +22,6 @@ negocioRouter.post("/negocios", async (req: Request, res: Response) => {
     const nomeFantasia = sanitizar(req.body.nomeFantasia || "");
     const descricao = sanitizar(req.body.descricao || "");
     const telefoneComercial = (req.body.telefoneComercial || "").replace(/\D/g, "");
-    const cep = (req.body.cep || "").replace(/\D/g, "");
     const endereco = sanitizar(req.body.endereco || "");
     const bairro = sanitizar(req.body.bairro || "");
     const cidade = sanitizar(req.body.cidade || "");
@@ -63,7 +62,6 @@ negocioRouter.post("/negocios", async (req: Request, res: Response) => {
         nome_fantasia: nomeFantasia,
         descricao,
         telefone_comercial: telefoneComercial || null,
-        cep: cep || null,
         endereco: endereco || null,
         bairro: bairro || null,
         cidade: cidade || null,
@@ -97,7 +95,6 @@ negocioRouter.post("/negocios", async (req: Request, res: Response) => {
         nomeFantasia: data.nome_fantasia,
         descricao: data.descricao,
         telefoneComercial: data.telefone_comercial,
-        cep: data.cep,
         endereco: data.endereco,
         bairro: data.bairro,
         cidade: data.cidade,
@@ -144,7 +141,6 @@ negocioRouter.get("/negocios/:ownerId", async (req: Request, res: Response) => {
       nomeFantasia: n.nome_fantasia,
       descricao: n.descricao,
       telefoneComercial: n.telefone_comercial,
-      cep: n.cep,
       endereco: n.endereco,
       bairro: n.bairro,
       cidade: n.cidade,
@@ -211,9 +207,6 @@ negocioRouter.put("/negocios/:negocioId", async (req: Request, res: Response) =>
     }
     if (req.body.cnpjCpf !== undefined) {
       updates.cnpj_cpf = req.body.cnpjCpf.replace(/\D/g, "");
-    }
-    if (req.body.cep !== undefined) {
-      updates.cep = req.body.cep.replace(/\D/g, "");
     }
     if (req.body.ativo !== undefined) {
       updates.ativo = Boolean(req.body.ativo);
