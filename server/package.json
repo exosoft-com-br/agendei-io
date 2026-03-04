@@ -10,7 +10,7 @@
     "seed": "npx ts-node src/seed.ts"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.0",
