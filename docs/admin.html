@@ -137,7 +137,7 @@
     <label>API:</label>
     <input type="text" id="cfgApiUrl" placeholder="https://plataforma-agendamentos-api.onrender.com">
     <label>Owner ID:</label>
-    <input type="text" id="cfgOwnerId" placeholder="UUID do dono">
+    <input type="text" id="cfgOwnerId" placeholder="Clique Conectar para gerar">
     <button class="btn btn-primary" onclick="salvarConfig()">Conectar</button>
   </div>
 
@@ -455,6 +455,11 @@
   function salvarConfig() {
     API_URL = document.getElementById('cfgApiUrl').value.trim().replace(/\/$/, '');
     OWNER_ID = document.getElementById('cfgOwnerId').value.trim();
+    if (!OWNER_ID) {
+      OWNER_ID = crypto.randomUUID();
+      document.getElementById('cfgOwnerId').value = OWNER_ID;
+      showAlert('success', 'Owner ID gerado automaticamente: ' + OWNER_ID);
+    }
     localStorage.setItem('adminApiUrl', API_URL);
     localStorage.setItem('adminOwnerId', OWNER_ID);
     verificarConexao();
@@ -700,6 +705,10 @@
       };
       if (!body.nichoId || !body.nomeFantasia) {
         showAlert('error', 'Nicho e Nome Fantasia são obrigatórios.');
+        return;
+      }
+      if (!OWNER_ID) {
+        showAlert('error', 'Clique em "Conectar" primeiro para gerar seu Owner ID.');
         return;
       }
       const data = await apiFetch('/negocios', { method: 'POST', body: JSON.stringify(body) });
