@@ -1,12 +1,13 @@
 -- ============================================================
 -- Evolução: Perfis de Negócio + Personalização + Calendário
 -- Executar no SQL Editor do Supabase APÓS schema.sql
+-- NOTA: Usa profiles_atendimentos para não conflitar com profiles do Auth
 -- ============================================================
 
 -- ==============================
--- 1. PROFILES — donos de negócio (vinculados ao Supabase Auth)
+-- 1. PROFILES_ATENDIMENTOS — donos de negócio (vinculados ao Supabase Auth)
 -- ==============================
-CREATE TABLE IF NOT EXISTS profiles (
+CREATE TABLE IF NOT EXISTS profiles_atendimentos (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
   nome_completo TEXT NOT NULL,
@@ -17,14 +18,14 @@ CREATE TABLE IF NOT EXISTS profiles (
   atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_profiles_email ON profiles (email);
+CREATE INDEX IF NOT EXISTS idx_profiles_atend_email ON profiles_atendimentos (email);
 
 -- ==============================
 -- 2. NEGÓCIOS — cada profile pode ter múltiplos negócios (1 por nicho)
 -- ==============================
 CREATE TABLE IF NOT EXISTS negocios (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  owner_id UUID NOT NULL REFERENCES profiles_atendimentos(id) ON DELETE CASCADE,
   nicho_id TEXT NOT NULL REFERENCES nichos(id) ON DELETE CASCADE,
   nome_fantasia TEXT NOT NULL,
   descricao TEXT,
@@ -39,8 +40,8 @@ CREATE TABLE IF NOT EXISTS negocios (
   UNIQUE(owner_id, nicho_id)
 );
 
-CREATE INDEX idx_negocios_owner ON negocios (owner_id);
-CREATE INDEX idx_negocios_nicho ON negocios (nicho_id);
+CREATE INDEX IF NOT EXISTS idx_negocios_owner ON negocios (owner_id);
+CREATE INDEX IF NOT EXISTS idx_negocios_nicho ON negocios (nicho_id);
 
 -- ==============================
 -- 3. PERSONALIZAÇÕES VISUAIS — cores, logo, branding do negócio
@@ -64,7 +65,7 @@ CREATE TABLE IF NOT EXISTS personalizacoes (
   atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_personalizacoes_negocio ON personalizacoes (negocio_id);
+CREATE INDEX IF NOT EXISTS idx_personalizacoes_negocio ON personalizacoes (negocio_id);
 
 -- ==============================
 -- 4. INTEGRACOES_EMAIL — sincronização de calendário
@@ -93,8 +94,8 @@ CREATE TABLE IF NOT EXISTS integracoes_email (
   UNIQUE(negocio_id, prestador_id, provedor)
 );
 
-CREATE INDEX idx_integracoes_negocio ON integracoes_email (negocio_id);
-CREATE INDEX idx_integracoes_prestador ON integracoes_email (prestador_id);
+CREATE INDEX IF NOT EXISTS idx_integracoes_negocio ON integracoes_email (negocio_id);
+CREATE INDEX IF NOT EXISTS idx_integracoes_prestador ON integracoes_email (prestador_id);
 
 -- ==============================
 -- 5. VINCULAR prestadores ao negócio (dono)
@@ -106,8 +107,8 @@ CREATE INDEX IF NOT EXISTS idx_prestadores_negocio ON prestadores (negocio_id);
 -- ==============================
 -- 6. VINCULAR nichos ao dono (quem criou)
 -- ==============================
-ALTER TABLE nichos ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES profiles(id) ON DELETE SET NULL;
-ALTER TABLE nichos ADD COLUMN IF NOT EXISTS slug TEXT UNIQUE;
+ALTER TABLE nichos ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES profiles_atendimentos(id) ON DELETE SET NULL;
+ALTER TABLE nichos ADD COLUMN IF NOT EXISTS slug TEXT;
 
 -- ==============================
 -- 7. STORAGE — bucket para logos e imagens
@@ -133,39 +134,46 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- ==============================
--- 8. RLS — Políticas de segurança
+-- 8. RLS — Políticas de segurança (DROP antes de CREATE para idempotência)
 -- ==============================
 
--- PROFILES: usuário só lê/atualiza o próprio
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+-- PROFILES_ATENDIMENTOS: usuário só lê/atualiza o próprio
+ALTER TABLE profiles_atendimentos ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "profiles_select_own"
-  ON profiles FOR SELECT
+DROP POLICY IF EXISTS "profatend_select_own" ON profiles_atendimentos;
+CREATE POLICY "profatend_select_own"
+  ON profiles_atendimentos FOR SELECT
   USING (auth.uid() = id);
 
-CREATE POLICY "profiles_insert_own"
-  ON profiles FOR INSERT
+DROP POLICY IF EXISTS "profatend_insert_own" ON profiles_atendimentos;
+CREATE POLICY "profatend_insert_own"
+  ON profiles_atendimentos FOR INSERT
   WITH CHECK (auth.uid() = id);
 
-CREATE POLICY "profiles_update_own"
-  ON profiles FOR UPDATE
+DROP POLICY IF EXISTS "profatend_update_own" ON profiles_atendimentos;
+CREATE POLICY "profatend_update_own"
+  ON profiles_atendimentos FOR UPDATE
   USING (auth.uid() = id);
 
 -- NEGOCIOS: dono lê/atualiza os próprios
 ALTER TABLE negocios ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "negocios_select_own" ON negocios;
 CREATE POLICY "negocios_select_own"
   ON negocios FOR SELECT
   USING (owner_id = auth.uid());
 
+DROP POLICY IF EXISTS "negocios_select_public_active" ON negocios;
 CREATE POLICY "negocios_select_public_active"
   ON negocios FOR SELECT
   USING (ativo = true);
 
+DROP POLICY IF EXISTS "negocios_insert_own" ON negocios;
 CREATE POLICY "negocios_insert_own"
   ON negocios FOR INSERT
   WITH CHECK (owner_id = auth.uid());
 
+DROP POLICY IF EXISTS "negocios_update_own" ON negocios;
 CREATE POLICY "negocios_update_own"
   ON negocios FOR UPDATE
   USING (owner_id = auth.uid());
@@ -173,16 +181,19 @@ CREATE POLICY "negocios_update_own"
 -- PERSONALIZACOES: dono do negócio pode ler/atualizar
 ALTER TABLE personalizacoes ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "personalizacoes_select_public" ON personalizacoes;
 CREATE POLICY "personalizacoes_select_public"
   ON personalizacoes FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "personalizacoes_insert_own" ON personalizacoes;
 CREATE POLICY "personalizacoes_insert_own"
   ON personalizacoes FOR INSERT
   WITH CHECK (
     EXISTS (SELECT 1 FROM negocios WHERE negocios.id = negocio_id AND negocios.owner_id = auth.uid())
   );
 
+DROP POLICY IF EXISTS "personalizacoes_update_own" ON personalizacoes;
 CREATE POLICY "personalizacoes_update_own"
   ON personalizacoes FOR UPDATE
   USING (
@@ -192,18 +203,21 @@ CREATE POLICY "personalizacoes_update_own"
 -- INTEGRACOES_EMAIL: dono do negócio
 ALTER TABLE integracoes_email ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "integracoes_select_own" ON integracoes_email;
 CREATE POLICY "integracoes_select_own"
   ON integracoes_email FOR SELECT
   USING (
     EXISTS (SELECT 1 FROM negocios WHERE negocios.id = negocio_id AND negocios.owner_id = auth.uid())
   );
 
+DROP POLICY IF EXISTS "integracoes_insert_own" ON integracoes_email;
 CREATE POLICY "integracoes_insert_own"
   ON integracoes_email FOR INSERT
   WITH CHECK (
     EXISTS (SELECT 1 FROM negocios WHERE negocios.id = negocio_id AND negocios.owner_id = auth.uid())
   );
 
+DROP POLICY IF EXISTS "integracoes_update_own" ON integracoes_email;
 CREATE POLICY "integracoes_update_own"
   ON integracoes_email FOR UPDATE
   USING (
@@ -211,21 +225,25 @@ CREATE POLICY "integracoes_update_own"
   );
 
 -- STORAGE: qualquer um lê logos (público), só autenticado faz upload
+DROP POLICY IF EXISTS "logos_select_public" ON storage.objects;
 CREATE POLICY "logos_select_public" ON storage.objects
   FOR SELECT USING (bucket_id IN ('logos', 'banners'));
 
+DROP POLICY IF EXISTS "logos_insert_auth" ON storage.objects;
 CREATE POLICY "logos_insert_auth" ON storage.objects
   FOR INSERT WITH CHECK (
     bucket_id IN ('logos', 'banners')
     AND auth.role() = 'authenticated'
   );
 
+DROP POLICY IF EXISTS "logos_update_auth" ON storage.objects;
 CREATE POLICY "logos_update_auth" ON storage.objects
   FOR UPDATE USING (
     bucket_id IN ('logos', 'banners')
     AND auth.role() = 'authenticated'
   );
 
+DROP POLICY IF EXISTS "logos_delete_auth" ON storage.objects;
 CREATE POLICY "logos_delete_auth" ON storage.objects
   FOR DELETE USING (
     bucket_id IN ('logos', 'banners')
@@ -233,12 +251,12 @@ CREATE POLICY "logos_delete_auth" ON storage.objects
   );
 
 -- ==============================
--- 9. TRIGGER — auto-criar profile ao registrar no Auth
+-- 9. TRIGGER — auto-criar profile_atendimento ao registrar no Auth
 -- ==============================
-CREATE OR REPLACE FUNCTION public.handle_new_user()
+CREATE OR REPLACE FUNCTION public.handle_new_user_atendimentos()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, nome_completo)
+  INSERT INTO public.profiles_atendimentos (id, email, nome_completo)
   VALUES (
     NEW.id,
     NEW.email,
@@ -248,11 +266,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
+DROP TRIGGER IF EXISTS on_auth_user_created_atendimentos ON auth.users;
+CREATE TRIGGER on_auth_user_created_atendimentos
   AFTER INSERT ON auth.users
   FOR EACH ROW
-  EXECUTE FUNCTION public.handle_new_user();
+  EXECUTE FUNCTION public.handle_new_user_atendimentos();
 
 -- ==============================
 -- 10. FUNCTION — atualizar timestamp automaticamente
@@ -265,13 +283,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_profiles_updated
-  BEFORE UPDATE ON profiles FOR EACH ROW EXECUTE FUNCTION update_atualizado_em();
+DROP TRIGGER IF EXISTS trg_profatend_updated ON profiles_atendimentos;
+CREATE TRIGGER trg_profatend_updated
+  BEFORE UPDATE ON profiles_atendimentos FOR EACH ROW EXECUTE FUNCTION update_atualizado_em();
+DROP TRIGGER IF EXISTS trg_negocios_updated ON negocios;
 CREATE TRIGGER trg_negocios_updated
   BEFORE UPDATE ON negocios FOR EACH ROW EXECUTE FUNCTION update_atualizado_em();
+DROP TRIGGER IF EXISTS trg_personalizacoes_updated ON personalizacoes;
 CREATE TRIGGER trg_personalizacoes_updated
   BEFORE UPDATE ON personalizacoes FOR EACH ROW EXECUTE FUNCTION update_atualizado_em();
+DROP TRIGGER IF EXISTS trg_integracoes_updated ON integracoes_email;
 CREATE TRIGGER trg_integracoes_updated
   BEFORE UPDATE ON integracoes_email FOR EACH ROW EXECUTE FUNCTION update_atualizado_em();
+DROP TRIGGER IF EXISTS trg_nichos_updated ON nichos;
 CREATE TRIGGER trg_nichos_updated
   BEFORE UPDATE ON nichos FOR EACH ROW EXECUTE FUNCTION update_atualizado_em();

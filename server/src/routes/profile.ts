@@ -17,7 +17,7 @@ profileRouter.get("/profile/:userId", async (req: Request, res: Response) => {
     }
 
     const { data, error } = await supabase
-      .from("profiles")
+      .from("profiles_atendimentos")
       .select("*")
       .eq("id", userId)
       .single();
@@ -69,7 +69,7 @@ profileRouter.put("/profile/:userId", async (req: Request, res: Response) => {
     }
 
     const { data, error } = await supabase
-      .from("profiles")
+      .from("profiles_atendimentos")
       .update(updates)
       .eq("id", userId)
       .select()
