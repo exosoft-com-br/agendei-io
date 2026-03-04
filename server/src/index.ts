@@ -11,6 +11,9 @@ import { availabilityRouter } from "./routes/availability";
 import { bookingRouter } from "./routes/booking";
 import { nichoConfigRouter } from "./routes/nichoConfig";
 import { webhookRouter } from "./routes/webhook";
+import { profileRouter } from "./routes/profile";
+import { negocioRouter } from "./routes/negocio";
+import { calendarioRouter } from "./routes/calendario";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,7 +48,7 @@ app.use(
       console.warn(`⚠️  CORS bloqueado: ${origin}`);
       callback(new Error("Não permitido por CORS"));
     },
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     maxAge: 86400, // Cache preflight por 24h
   })
@@ -104,6 +107,9 @@ app.use("/api", availabilityRouter);
 app.use("/api", bookingRouter);
 app.use("/api", nichoConfigRouter);
 app.use("/api", webhookRouter);
+app.use("/api", profileRouter);
+app.use("/api", negocioRouter);
+app.use("/api", calendarioRouter);
 
 // Health check
 app.get("/health", (_req, res) => {
@@ -114,7 +120,7 @@ app.get("/health", (_req, res) => {
 app.get("/", (_req, res) => {
   res.json({
     nome: "Plataforma de Agendamentos",
-    versao: "1.0.0",
+    versao: "2.0.0",
     status: "online",
   });
 });

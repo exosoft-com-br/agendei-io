@@ -8,13 +8,9 @@ services:
     buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
     envVars:
-      - key: SUPABASE_URL
-        value: https://bhargdkruycbrcanfvuz.supabase.co
-      - key: SUPABASE_ANON_KEY
-        value: sb_publishable_ROUFdAxC5BtCpMCr9oEzMw_zYukMCwX
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        value: CHANGE_ME
       - key: ALLOWED_ORIGINS
         value: https://exosoft-com-br.github.io
       - key: NODE_ENV
         value: production
+      # SUPABASE_URL, SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY
+      # são configuradas via Dashboard/API do Render (não versionadas no git)
