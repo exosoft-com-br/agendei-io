@@ -1,0 +1,82 @@
+{
+  "nichos": {
+    "barbearia": {
+      "id": "barbearia",
+      "nomePublico": "Barbearia do João",
+      "tipoCliente": "cliente",
+      "saudacaoInicial": "✂️ Olá! Bem-vindo à Barbearia do João! Vamos agendar seu horário?",
+      "textoConfirmacao": "✅ Agendamento confirmado! Seu protocolo é {protocolo}. Te esperamos em {dataHora}!",
+      "termos": {
+        "servico": "serviço",
+        "prestador": "barbeiro"
+      },
+      "ativo": true
+    }
+  },
+  "prestadores": {
+    "barbeiro-pedro": {
+      "id": "barbeiro-pedro",
+      "nichoId": "barbearia",
+      "nome": "Barbeiro Pedro",
+      "categoria": "Corte Masculino",
+      "ativo": true,
+      "horarioAtendimento": {
+        "inicio": "09:00",
+        "fim": "19:00",
+        "diasSemana": [1, 2, 3, 4, 5, 6]
+      },
+      "whatsappNumero": "5511999999001"
+    },
+    "barbeiro-lucas": {
+      "id": "barbeiro-lucas",
+      "nichoId": "barbearia",
+      "nome": "Barbeiro Lucas",
+      "categoria": "Barba e Cabelo",
+      "ativo": true,
+      "horarioAtendimento": {
+        "inicio": "10:00",
+        "fim": "20:00",
+        "diasSemana": [1, 2, 3, 4, 5, 6]
+      },
+      "whatsappNumero": "5511999999002"
+    }
+  },
+  "servicos": {
+    "corte-simples": {
+      "id": "corte-simples",
+      "prestadorId": "barbeiro-pedro",
+      "nichoId": "barbearia",
+      "nome": "Corte Simples",
+      "duracaoMinutos": 30,
+      "preco": 35.00,
+      "ativo": true
+    },
+    "corte-barba": {
+      "id": "corte-barba",
+      "prestadorId": "barbeiro-pedro",
+      "nichoId": "barbearia",
+      "nome": "Corte + Barba",
+      "duracaoMinutos": 45,
+      "preco": 55.00,
+      "ativo": true
+    },
+    "barba-completa": {
+      "id": "barba-completa",
+      "prestadorId": "barbeiro-lucas",
+      "nichoId": "barbearia",
+      "nome": "Barba Completa",
+      "duracaoMinutos": 30,
+      "preco": 30.00,
+      "ativo": true
+    },
+    "corte-degradê": {
+      "id": "corte-degrade",
+      "prestadorId": "barbeiro-lucas",
+      "nichoId": "barbearia",
+      "nome": "Corte Degradê",
+      "duracaoMinutos": 45,
+      "preco": 45.00,
+      "ativo": true
+    }
+  }
+}

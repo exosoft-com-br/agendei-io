@@ -1,0 +1,12 @@
+{
+  "id": "consultoria",
+  "nomePublico": "ConsultaTech — Consultoria Digital",
+  "tipoCliente": "cliente",
+  "saudacaoInicial": "💼 Olá! Bem-vindo à ConsultaTech! Vamos agendar sua sessão de consultoria?",
+  "textoConfirmacao": "✅ Sessão de consultoria confirmada! Protocolo: {protocolo}. Nos vemos em {dataHora}!",
+  "termos": {
+    "servico": "sessão",
+    "prestador": "consultor"
+  },
+  "ativo": true
+}

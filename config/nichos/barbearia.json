@@ -1,0 +1,12 @@
+{
+  "id": "barbearia",
+  "nomePublico": "Barbearia do João",
+  "tipoCliente": "cliente",
+  "saudacaoInicial": "✂️ Olá! Bem-vindo à Barbearia do João! Vamos agendar seu horário?",
+  "textoConfirmacao": "✅ Agendamento confirmado! Seu protocolo é {protocolo}. Te esperamos em {dataHora}!",
+  "termos": {
+    "servico": "serviço",
+    "prestador": "barbeiro"
+  },
+  "ativo": true
+}

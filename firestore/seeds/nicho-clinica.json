@@ -1,0 +1,94 @@
+{
+  "nichos": {
+    "clinica": {
+      "id": "clinica",
+      "nomePublico": "Clínica Saúde Total",
+      "tipoCliente": "paciente",
+      "saudacaoInicial": "🏥 Olá! Bem-vindo à Clínica Saúde Total! Como posso te ajudar hoje?",
+      "textoConfirmacao": "✅ Consulta confirmada! Protocolo: {protocolo}. Até {dataHora}!",
+      "termos": {
+        "servico": "consulta",
+        "prestador": "médico"
+      },
+      "ativo": true
+    }
+  },
+  "prestadores": {
+    "dr-joao-silva": {
+      "id": "dr-joao-silva",
+      "nichoId": "clinica",
+      "nome": "Dr. João Silva",
+      "categoria": "Clínico Geral",
+      "ativo": true,
+      "horarioAtendimento": {
+        "inicio": "08:00",
+        "fim": "17:00",
+        "diasSemana": [1, 2, 3, 4, 5]
+      },
+      "whatsappNumero": "5511999998001"
+    },
+    "dra-maria-santos": {
+      "id": "dra-maria-santos",
+      "nichoId": "clinica",
+      "nome": "Dra. Maria Santos",
+      "categoria": "Cardiologista",
+      "ativo": true,
+      "horarioAtendimento": {
+        "inicio": "09:00",
+        "fim": "18:00",
+        "diasSemana": [1, 3, 5]
+      },
+      "whatsappNumero": "5511999998002"
+    },
+    "dr-carlos-oliveira": {
+      "id": "dr-carlos-oliveira",
+      "nichoId": "clinica",
+      "nome": "Dr. Carlos Oliveira",
+      "categoria": "Dermatologista",
+      "ativo": true,
+      "horarioAtendimento": {
+        "inicio": "08:00",
+        "fim": "16:00",
+        "diasSemana": [2, 4]
+      }
+    }
+  },
+  "servicos": {
+    "consulta-geral": {
+      "id": "consulta-geral",
+      "prestadorId": "dr-joao-silva",
+      "nichoId": "clinica",
+      "nome": "Consulta Geral",
+      "duracaoMinutos": 30,
+      "preco": 150.00,
+      "ativo": true
+    },
+    "consulta-retorno": {
+      "id": "consulta-retorno",
+      "prestadorId": "dr-joao-silva",
+      "nichoId": "clinica",
+      "nome": "Consulta de Retorno",
+      "duracaoMinutos": 20,
+      "preco": 80.00,
+      "ativo": true
+    },
+    "consulta-cardiologia": {
+      "id": "consulta-cardiologia",
+      "prestadorId": "dra-maria-santos",
+      "nichoId": "clinica",
+      "nome": "Consulta Cardiológica",
+      "duracaoMinutos": 45,
+      "preco": 250.00,
+      "ativo": true
+    },
+    "consulta-dermatologia": {
+      "id": "consulta-dermatologia",
+      "prestadorId": "dr-carlos-oliveira",
+      "nichoId": "clinica",
+      "nome": "Consulta Dermatológica",
+      "duracaoMinutos": 30,
+      "preco": 200.00,
+      "ativo": true
+    }
+  }
+}

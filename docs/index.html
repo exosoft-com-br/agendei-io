@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plataforma de Agendamentos</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.2);
+      max-width: 480px;
+      width: 100%;
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      padding: 24px;
+      text-align: center;
+    }
+    .header h1 { font-size: 1.4rem; margin-bottom: 4px; }
+    .header p { opacity: .85; font-size: .9rem; }
+    .body { padding: 24px; }
+    .step { display: none; }
+    .step.active { display: block; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; color: #333; font-size: .9rem; }
+    input, select {
+      width: 100%; padding: 12px; border: 2px solid #e0e0e0;
+      border-radius: 8px; font-size: 1rem; margin-bottom: 16px;
+      transition: border-color .2s;
+    }
+    input:focus, select:focus { outline: none; border-color: #667eea; }
+    .btn {
+      width: 100%; padding: 14px; border: none; border-radius: 8px;
+      font-size: 1rem; font-weight: 600; cursor: pointer;
+      transition: transform .1s, opacity .2s;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
+    .btn-primary:hover { opacity: .9; }
+    .btn-secondary { background: #f0f0f0; color: #333; margin-top: 8px; }
+    .btn-secondary:hover { background: #e0e0e0; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .slots-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 8px; margin-bottom: 16px;
+    }
+    .slot-btn {
+      padding: 10px 4px; border: 2px solid #e0e0e0; border-radius: 8px;
+      background: #fff; cursor: pointer; font-size: .9rem;
+      transition: all .2s; text-align: center;
+    }
+    .slot-btn:hover { border-color: #667eea; background: #f0f0ff; }
+    .slot-btn.selected { border-color: #667eea; background: #667eea; color: #fff; }
+    .slot-btn.ocupado { background: #f5f5f5; color: #bbb; cursor: not-allowed; text-decoration: line-through; }
+    .success-box {
+      background: #e8f5e9; border: 2px solid #4caf50; border-radius: 12px;
+      padding: 20px; text-align: center;
+    }
+    .success-box h2 { color: #2e7d32; margin-bottom: 8px; }
+    .success-box .protocolo {
+      font-size: 1.5rem; font-weight: 700; color: #1b5e20;
+      background: #c8e6c9; padding: 8px 16px; border-radius: 8px;
+      display: inline-block; margin: 8px 0;
+    }
+    .error { color: #d32f2f; font-size: .85rem; margin-bottom: 12px; }
+    .loading { text-align: center; padding: 20px; color: #666; }
+    .service-card {
+      border: 2px solid #e0e0e0; border-radius: 10px; padding: 14px;
+      margin-bottom: 10px; cursor: pointer; transition: all .2s;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .service-card:hover { border-color: #667eea; background: #f8f8ff; }
+    .service-card.selected { border-color: #667eea; background: #ede7f6; }
+    .service-card .name { font-weight: 600; }
+    .service-card .meta { font-size: .85rem; color: #666; }
+    .service-card .price { font-weight: 700; color: #667eea; font-size: 1.1rem; }
+    .cancel-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
+    .cancel-section h3 { margin-bottom: 12px; color: #666; font-size: .95rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 id="headerTitle">📅 Agendamento Online</h1>
+      <p id="headerSubtitle">Escolha seu horário em poucos passos</p>
+    </div>
+    <div class="body">
+      <!-- Step 0: Config -->
+      <div id="step0" class="step active">
+        <div class="loading">Carregando...</div>
+      </div>
+
+      <!-- Step 1: Nome -->
+      <div id="step1" class="step">
+        <label>Como posso te chamar?</label>
+        <input type="text" id="clienteNome" placeholder="Seu nome" minlength="3">
+        <label>Seu WhatsApp (com DDD)</label>
+        <input type="tel" id="clienteTelefone" placeholder="5511999999999" pattern="\d{12,13}">
+        <div id="err1" class="error"></div>
+        <button class="btn btn-primary" onclick="goStep2()">Continuar</button>
+      </div>
+
+      <!-- Step 2: Serviço -->
+      <div id="step2" class="step">
+        <label>Escolha o serviço:</label>
+        <div id="servicosList"></div>
+        <div id="err2" class="error"></div>
+        <button class="btn btn-secondary" onclick="showStep(1)">← Voltar</button>
+      </div>
+
+      <!-- Step 3: Data -->
+      <div id="step3" class="step">
+        <label>Para qual dia?</label>
+        <input type="date" id="dataConsulta" min="">
+        <div id="err3" class="error"></div>
+        <button class="btn btn-primary" onclick="goStep4()">Ver horários</button>
+        <button class="btn btn-secondary" onclick="showStep(2)">← Voltar</button>
+      </div>
+
+      <!-- Step 4: Horário -->
+      <div id="step4" class="step">
+        <label>Escolha o horário:</label>
+        <div id="slotsGrid" class="slots-grid"></div>
+        <div id="err4" class="error"></div>
+        <button class="btn btn-primary" id="btnConfirmar" onclick="confirmarAgendamento()" disabled>
+          Confirmar Agendamento
+        </button>
+        <button class="btn btn-secondary" onclick="showStep(3)">← Voltar</button>
+      </div>
+
+      <!-- Step 5: Sucesso -->
+      <div id="step5" class="step">
+        <div class="success-box">
+          <h2>✅ Agendamento Confirmado!</h2>
+          <p>Seu protocolo:</p>
+          <div class="protocolo" id="resultProtocolo"></div>
+          <p id="resultMsg" style="margin-top:12px; color:#555;"></p>
+        </div>
+        <button class="btn btn-primary" style="margin-top:16px" onclick="location.reload()">
+          Novo Agendamento
+        </button>
+        <div class="cancel-section">
+          <h3>Cancelar um agendamento</h3>
+          <input type="text" id="cancelProtocolo" placeholder="Protocolo (ex: AGD-2026-XXXX)">
+          <input type="tel" id="cancelTelefone" placeholder="Telefone cadastrado">
+          <div id="cancelResult" class="error"></div>
+          <button class="btn btn-secondary" onclick="cancelarAgendamento()">Cancelar Agendamento</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // === CONFIGURAÇÃO ===
+    // Altere API_URL para a URL do Render após deploy
+    const API_URL = localStorage.getItem('apiUrl') || 'http://localhost:3000';
+    const NICHO_ID = localStorage.getItem('nichoId') || 'barbearia';
+
+    let config = null;
+    let selectedServico = null;
+    let selectedPrestador = null;
+    let selectedSlot = null;
+
+    // === INIT ===
+    async function init() {
+      try {
+        const res = await fetch(`${API_URL}/api/nicho?nichoId=${NICHO_ID}`);
+        config = await res.json();
+
+        if (config.nicho) {
+          document.getElementById('headerTitle').textContent = `📅 ${config.nicho.nomePublico}`;
+          document.getElementById('headerSubtitle').textContent = 'Agende seu horário online';
+
+          // Se só tem 1 prestador, selecionar automaticamente
+          if (config.prestadores.length === 1) {
+            selectedPrestador = config.prestadores[0];
+          }
+
+          // Min date = amanhã
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          document.getElementById('dataConsulta').min = tomorrow.toISOString().split('T')[0];
+          document.getElementById('dataConsulta').value = tomorrow.toISOString().split('T')[0];
+
+          showStep(1);
+        } else {
+          document.getElementById('step0').innerHTML = '<div class="error">Erro ao carregar configuração.</div>';
+        }
+      } catch (e) {
+        document.getElementById('step0').innerHTML =
+          `<div class="error">Erro de conexão com a API.<br><small>${e.message}</small></div>
+           <br><label>URL da API:</label>
+           <input type="text" id="apiUrlInput" value="${API_URL}" placeholder="http://localhost:3000">
+           <button class="btn btn-primary" onclick="localStorage.setItem('apiUrl', document.getElementById('apiUrlInput').value); location.reload();">Salvar e Reconectar</button>`;
+      }
+    }
+
+    function showStep(n) {
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+      document.getElementById(`step${n}`).classList.add('active');
+    }
+
+    // Step 1 → 2
+    function goStep2() {
+      const nome = document.getElementById('clienteNome').value.trim();
+      const tel = document.getElementById('clienteTelefone').value.trim();
+      if (nome.length < 3) { document.getElementById('err1').textContent = 'Nome deve ter pelo menos 3 caracteres.'; return; }
+      if (!/^\d{12,13}$/.test(tel)) { document.getElementById('err1').textContent = 'Telefone inválido. Use formato: 5511999999999'; return; }
+      document.getElementById('err1').textContent = '';
+
+      // Renderizar serviços
+      const list = document.getElementById('servicosList');
+      list.innerHTML = '';
+      config.servicos.forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'service-card';
+        card.innerHTML = `
+          <div>
+            <div class="name">${s.nome}</div>
+            <div class="meta">${s.duracaoMinutos} min</div>
+          </div>
+          <div class="price">${s.preco ? `R$ ${s.preco}` : ''}</div>
+        `;
+        card.onclick = () => {
+          document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          selectedServico = s;
+          // Se tem mais de 1 prestador, mostrar seleção
+          if (config.prestadores.length > 1) {
+            // TODO: step de escolha de prestador
+          }
+          showStep(3);
+        };
+        list.appendChild(card);
+      });
+
+      showStep(2);
+    }
+
+    // Step 3 → 4
+    async function goStep4() {
+      const data = document.getElementById('dataConsulta').value;
+      if (!data) { document.getElementById('err3').textContent = 'Selecione uma data.'; return; }
+      document.getElementById('err3').textContent = '';
+
+      const grid = document.getElementById('slotsGrid');
+      grid.innerHTML = '<div class="loading" style="grid-column:1/-1">Buscando horários...</div>';
+      showStep(4);
+      selectedSlot = null;
+      document.getElementById('btnConfirmar').disabled = true;
+
+      try {
+        const res = await fetch(
+          `${API_URL}/api/availability?prestadorId=${selectedPrestador.id}&servicoId=${selectedServico.id}&data=${data}`
+        );
+        const json = await res.json();
+
+        grid.innerHTML = '';
+        if (!json.slots || json.slots.length === 0) {
+          grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#999;">Nenhum horário disponível nesta data.</div>';
+          return;
+        }
+
+        json.slots.forEach(slot => {
+          const btn = document.createElement('button');
+          const hora = slot.inicio.split('T')[1].substring(0, 5);
+          btn.textContent = hora;
+          btn.className = `slot-btn ${slot.disponivel ? '' : 'ocupado'}`;
+          if (slot.disponivel) {
+            btn.onclick = () => {
+              document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+              btn.classList.add('selected');
+              selectedSlot = slot.inicio;
+              document.getElementById('btnConfirmar').disabled = false;
+            };
+          }
+          grid.appendChild(btn);
+        });
+      } catch (e) {
+        grid.innerHTML = `<div class="error" style="grid-column:1/-1">Erro ao buscar horários: ${e.message}</div>`;
+      }
+    }
+
+    // Confirmar
+    async function confirmarAgendamento() {
+      const btn = document.getElementById('btnConfirmar');
+      btn.disabled = true;
+      btn.textContent = 'Agendando...';
+
+      try {
+        const res = await fetch(`${API_URL}/api/booking`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nichoId: NICHO_ID,
+            prestadorId: selectedPrestador.id,
+            servicoId: selectedServico.id,
+            clienteNome: document.getElementById('clienteNome').value.trim(),
+            clienteTelefone: document.getElementById('clienteTelefone').value.trim(),
+            dataHora: selectedSlot,
+          }),
+        });
+
+        const json = await res.json();
+
+        if (json.sucesso) {
+          document.getElementById('resultProtocolo').textContent = json.protocolo;
+          document.getElementById('resultMsg').textContent = json.mensagemConfirmacao;
+          showStep(5);
+        } else {
+          document.getElementById('err4').textContent = json.erro || 'Erro ao agendar.';
+          btn.disabled = false;
+          btn.textContent = 'Confirmar Agendamento';
+        }
+      } catch (e) {
+        document.getElementById('err4').textContent = `Erro: ${e.message}`;
+        btn.disabled = false;
+        btn.textContent = 'Confirmar Agendamento';
+      }
+    }
+
+    // Cancelar
+    async function cancelarAgendamento() {
+      const proto = document.getElementById('cancelProtocolo').value.trim();
+      const tel = document.getElementById('cancelTelefone').value.trim();
+      const result = document.getElementById('cancelResult');
+
+      if (!proto || !tel) { result.textContent = 'Preencha protocolo e telefone.'; return; }
+
+      try {
+        const res = await fetch(`${API_URL}/api/booking/cancel`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ protocolo: proto, clienteTelefone: tel }),
+        });
+        const json = await res.json();
+        result.style.color = json.sucesso ? '#2e7d32' : '#d32f2f';
+        result.textContent = json.mensagem || json.erro;
+      } catch (e) {
+        result.textContent = `Erro: ${e.message}`;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

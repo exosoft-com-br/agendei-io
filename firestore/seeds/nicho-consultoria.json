@@ -1,0 +1,82 @@
+{
+  "nichos": {
+    "consultoria": {
+      "id": "consultoria",
+      "nomePublico": "ConsultaTech — Consultoria Digital",
+      "tipoCliente": "cliente",
+      "saudacaoInicial": "💼 Olá! Bem-vindo à ConsultaTech! Vamos agendar sua sessão de consultoria?",
+      "textoConfirmacao": "✅ Sessão de consultoria confirmada! Protocolo: {protocolo}. Nos vemos em {dataHora}!",
+      "termos": {
+        "servico": "sessão",
+        "prestador": "consultor"
+      },
+      "ativo": true
+    }
+  },
+  "prestadores": {
+    "consultor-ana": {
+      "id": "consultor-ana",
+      "nichoId": "consultoria",
+      "nome": "Ana Ferreira",
+      "categoria": "Marketing Digital",
+      "ativo": true,
+      "horarioAtendimento": {
+        "inicio": "09:00",
+        "fim": "18:00",
+        "diasSemana": [1, 2, 3, 4, 5]
+      },
+      "whatsappNumero": "5511999997001"
+    },
+    "consultor-rafael": {
+      "id": "consultor-rafael",
+      "nichoId": "consultoria",
+      "nome": "Rafael Costa",
+      "categoria": "Estratégia de Negócios",
+      "ativo": true,
+      "horarioAtendimento": {
+        "inicio": "10:00",
+        "fim": "19:00",
+        "diasSemana": [1, 2, 3, 4, 5]
+      },
+      "whatsappNumero": "5511999997002"
+    }
+  },
+  "servicos": {
+    "sessao-diagnostico": {
+      "id": "sessao-diagnostico",
+      "prestadorId": "consultor-ana",
+      "nichoId": "consultoria",
+      "nome": "Sessão de Diagnóstico",
+      "duracaoMinutos": 60,
+      "preco": 300.00,
+      "ativo": true
+    },
+    "sessao-mentoria": {
+      "id": "sessao-mentoria",
+      "prestadorId": "consultor-ana",
+      "nichoId": "consultoria",
+      "nome": "Mentoria Individual",
+      "duracaoMinutos": 45,
+      "preco": 250.00,
+      "ativo": true
+    },
+    "sessao-estrategia": {
+      "id": "sessao-estrategia",
+      "prestadorId": "consultor-rafael",
+      "nichoId": "consultoria",
+      "nome": "Planejamento Estratégico",
+      "duracaoMinutos": 90,
+      "preco": 500.00,
+      "ativo": true
+    },
+    "sessao-acompanhamento": {
+      "id": "sessao-acompanhamento",
+      "prestadorId": "consultor-rafael",
+      "nichoId": "consultoria",
+      "nome": "Acompanhamento Mensal",
+      "duracaoMinutos": 30,
+      "preco": 150.00,
+      "ativo": true
+    }
+  }
+}
