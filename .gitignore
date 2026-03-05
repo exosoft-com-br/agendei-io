@@ -1,29 +1,14 @@
 # Dependências
 node_modules/
-lib/
 
 # Build output
 server/dist/
-backend/functions/lib/
 
 # Variáveis de ambiente (NUNCA commitar)
 .env
 .env.local
 .env.production
-backend/functions/.env
-backend/functions/.env.local
 server/.env
-
-# Firebase
-.firebase/
-firebase-debug.log
-firebase-debug.*.log
-firestore-debug.log
-ui-debug.log
-pubsub-debug.log
-
-# TypeScript build (Firebase functions)
-backend/functions/lib/
 
 # IDEs
 .vscode/

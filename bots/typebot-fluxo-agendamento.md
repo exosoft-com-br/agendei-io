@@ -22,7 +22,7 @@ Configure estas variáveis no painel do Typebot antes de montar o fluxo:
 | Variável | Tipo | Descrição |
 |----------|------|-----------|
 | `nichoId` | String | ID do nicho ativo (ex: "barbearia") — configurar como valor fixo |
-| `FUNCTIONS_URL` | String | URL base das Cloud Functions (ex: `https://southamerica-east1-agendamentos-poc.cloudfunctions.net`) |
+| `API_URL` | String | URL base da API no Render (ex: `https://plataforma-agendamentos-api.onrender.com`) |
 | `clienteNome` | String | Nome do cliente (preenchido no fluxo) |
 | `clienteTelefone` | String | Telefone do cliente (capturado automaticamente pelo WhatsApp) |
 | `nichoConfig` | Object | Config completa do nicho (retornada pela API) |
@@ -78,7 +78,7 @@ Vou te ajudar a encontrar o melhor horário.
 | Campo | Valor |
 |-------|-------|
 | Método | `GET` |
-| URL | `{{FUNCTIONS_URL}}/getNichoConfig?nichoId={{nichoId}}` |
+| URL | `{{API_URL}}/api/nicho?nichoId={{nichoId}}` |
 | Headers | `Content-Type: application/json` |
 | Salvar resposta em | `nichoConfig` |
 
@@ -218,7 +218,7 @@ Seu atendimento será com {{prestadorNome}}! 👨‍⚕️
 | Campo | Valor |
 |-------|-------|
 | Método | `GET` |
-| URL | `{{FUNCTIONS_URL}}/getAvailableSlots?prestadorId={{prestadorId}}&servicoId={{servicoId}}` |
+| URL | `{{API_URL}}/api/availability?prestadorId={{prestadorId}}&servicoId={{servicoId}}` |
 | Headers | `Content-Type: application/json` |
 | Salvar resposta em | `slotsDisponiveis` |
 
@@ -319,7 +319,7 @@ Está tudo certo?
 | Campo | Valor |
 |-------|-------|
 | Método | `POST` |
-| URL | `{{FUNCTIONS_URL}}/createBooking` |
+| URL | `{{API_URL}}/api/booking` |
 | Headers | `Content-Type: application/json` |
 | Body | Ver abaixo |
 | Salvar resposta em | `resultadoAgendamento` |
@@ -405,7 +405,7 @@ Obrigado por agendar conosco! 😊
 | Campo | Valor |
 |-------|-------|
 | Método | `POST` |
-| URL | `{{FUNCTIONS_URL}}/cancelBooking` |
+| URL | `{{API_URL}}/api/booking/cancel` |
 | Body | `{ "protocolo": "{{protocolo}}", "clienteTelefone": "{{clienteTelefone}}" }` |
 
 4. **Mensagem de confirmação:**
@@ -422,7 +422,7 @@ Obrigado por agendar conosco! 😊
 - Crie um novo fluxo no Typebot
 - Defina as variáveis globais listadas no início deste documento
 - Configure `nichoId` como variável fixa (ex: "barbearia")
-- Configure `FUNCTIONS_URL` com a URL base das suas Cloud Functions
+- Configure `API_URL` com a URL base da sua API no Render
 
 ### 2. Blocos HTTP Request
 - No Typebot, use o bloco **"HTTP Request"** da seção "Integrations"
@@ -562,6 +562,6 @@ return formatada;
 
 1. **Timeout de API:** Configure timeout de 10s nas chamadas HTTP para evitar que o fluxo trave
 2. **Fallback:** Adicione mensagens de fallback caso a API retorne erro
-3. **Rate limit:** O Typebot pode fazer muitas chamadas — monitore o consumo de Cloud Functions
+3. **Rate limit:** O Typebot pode fazer muitas chamadas — monitore o consumo da API
 4. **Sessão:** Cada conversa WhatsApp é uma sessão separada no Typebot (usando o número como sessionId)
 5. **Persistência:** O Typebot mantém as variáveis durante toda a sessão — não precisa pedir dados novamente

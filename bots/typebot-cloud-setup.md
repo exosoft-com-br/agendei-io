@@ -20,7 +20,7 @@ Vá em **Settings → Variables** e crie:
 | Variável | Valor padrão |
 |----------|-------------|
 | `nichoId` | `barbearia` |
-| `FUNCTIONS_URL` | `https://southamerica-east1-curso-fb-51cc3.cloudfunctions.net` |
+| `API_URL` | `https://plataforma-agendamentos-api.onrender.com` |
 | `clienteNome` | *(vazio)* |
 | `clienteTelefone` | *(vazio — será preenchido automaticamente pela integração WhatsApp)* |
 | `nichoConfig` | *(vazio)* |
@@ -39,7 +39,7 @@ Vá em **Settings → Variables** e crie:
 
 ### Bloco 1 — Início + Carregar Config
 - **Tipo:** HTTP Request (GET)
-- **URL:** `{{FUNCTIONS_URL}}/getNichoConfig?nichoId={{nichoId}}`
+- **URL:** `{{API_URL}}/api/nicho?nichoId={{nichoId}}`
 - **Salvar resposta em:** `nichoConfig`
 
 ### Bloco 2 — Saudação
@@ -72,7 +72,7 @@ Vá em **Settings → Variables** e crie:
 
 ### Bloco 7 — Buscar Horários
 - **Tipo:** HTTP Request (GET)
-- **URL:** `{{FUNCTIONS_URL}}/getAvailableSlots?prestadorId={{prestadorId}}&servicoId={{servicoId}}&data={{dataConsulta}}`
+- **URL:** `{{API_URL}}/api/availability?prestadorId={{prestadorId}}&servicoId={{servicoId}}&data={{dataConsulta}}`
 - **Salvar resposta em:** `slotsDisponiveis`
 
 ### Bloco 8 — Escolher Horário
@@ -84,7 +84,7 @@ Vá em **Settings → Variables** e crie:
 
 ### Bloco 9 — Confirmar Agendamento
 - **Tipo:** HTTP Request (POST)
-- **URL:** `{{FUNCTIONS_URL}}/createBooking`
+- **URL:** `{{API_URL}}/api/booking`
 - **Body (JSON):**
 ```json
 {
@@ -120,7 +120,7 @@ Para cancelar, envie: cancelar {{protocolo}}
 1. No Typebot, vá em **Share → Integrations → WhatsApp**
 2. Configure o webhook URL da sua Evolution API apontando para:
    ```
-   https://southamerica-east1-curso-fb-51cc3.cloudfunctions.net/whatsappWebhook
+   https://plataforma-agendamentos-api.onrender.com/api/whatsapp/webhook
    ```
 3. Na Evolution API, configure o webhook de mensagens recebidas para apontar para o Typebot
 
@@ -128,10 +128,7 @@ Para cancelar, envie: cancelar {{protocolo}}
 
 1. No Typebot, ative **"Start from a webhook"** nas configurações
 2. Copie a URL do webhook gerada (ex: `https://typebot.io/api/v1/typebots/xxx/startChat`)
-3. Configure essa URL como secret `TYPEBOT_WEBHOOK_URL` no Firebase:
-   ```bash
-   firebase functions:secrets:set TYPEBOT_WEBHOOK_URL
-   ```
+3. Configure essa URL como variável de ambiente `TYPEBOT_WEBHOOK_URL` no Render Dashboard
 
 ---
 
@@ -149,7 +146,7 @@ Crie um segundo Typebot ou adicione uma condição no início:
 
 - **Condição:** Se a mensagem começa com "cancelar"
   - Extrair protocolo da mensagem
-  - HTTP POST para `{{FUNCTIONS_URL}}/cancelBooking`
+  - HTTP POST para `{{API_URL}}/api/booking/cancel`
   - Body: `{ "protocolo": "{{protocolo}}", "clienteTelefone": "{{clienteTelefone}}" }`
   - Responder: "Agendamento cancelado com sucesso!"
 - **Senão:** Seguir fluxo normal de agendamento

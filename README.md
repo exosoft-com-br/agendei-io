@@ -1,11 +1,11 @@
-# 🗓️ Plataforma de Agendamentos via WhatsApp
+# Plataforma de Agendamentos via WhatsApp
 
-> Plataforma genérica de agendamentos via WhatsApp, multi-nicho, serverless,
-> rodando 100% no ecossistema Google/Firebase.
+> Plataforma genérica de agendamentos via WhatsApp, multi-nicho.
+> Backend em Express.js + Supabase (PostgreSQL), deploy no Render.
 
 ---
 
-## 🎯 O que faz?
+## O que faz?
 
 Permite que qualquer negócio (barbearia, clínica, consultoria, pet shop, etc.)
 ofereça **agendamento automatizado via WhatsApp**, sem precisar de app ou site.
@@ -13,251 +13,217 @@ ofereça **agendamento automatizado via WhatsApp**, sem precisar de app ou site.
 O cliente envia uma mensagem no WhatsApp → o bot guia pelo fluxo →
 o agendamento é criado automaticamente.
 
-**Mudar de nicho = mudar dados no Firestore, não código.**
+**Mudar de nicho = mudar dados no banco, não código.**
 
 ---
 
-## 🏗️ Stack Tecnológica
+## Stack Tecnológica
 
 | Camada | Tecnologia |
 |--------|------------|
-| Backend | Firebase Cloud Functions (TypeScript) |
-| Banco de Dados | Cloud Firestore (NoSQL) |
-| Hosting | Firebase Hosting |
+| Backend | Express.js (TypeScript) |
+| Banco de Dados | Supabase (PostgreSQL + RLS) |
+| Hosting Frontend | GitHub Pages |
+| API Deploy | Render (Node.js) |
 | Bot | Typebot (low-code conversacional) |
 | WhatsApp | Evolution API (open source) |
-| Segredos | Google Cloud Secret Manager |
-| Infra | Google Cloud Platform |
+| Auth | JWT + bcrypt (roles: admin/usuario) |
+| Segurança | Helmet, CORS whitelist, Rate Limiting |
 
 ---
 
-## 📁 Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
 plataforma-agendamentos/
+├── server/                         # Backend Express.js
+│   ├── src/
+│   │   ├── index.ts                # Entry point — configura Express, rotas, segurança
+│   │   ├── supabaseClient.ts       # Cliente Supabase (service_role)
+│   │   ├── middleware/
+│   │   │   └── auth.ts             # JWT auth middleware (autenticar, apenasAdmin)
+│   │   ├── routes/
+│   │   │   ├── auth.ts             # Login, registro, OAuth Google/Facebook
+│   │   │   ├── availability.ts     # GET /api/availability
+│   │   │   ├── booking.ts          # POST /api/booking, /api/booking/cancel
+│   │   │   ├── calendario.ts       # CRUD /api/integracoes/email
+│   │   │   ├── negocio.ts          # CRUD /api/negocios
+│   │   │   ├── nichoConfig.ts      # GET /api/nicho
+│   │   │   ├── profile.ts          # GET/PUT /api/profile
+│   │   │   └── webhook.ts          # POST /api/whatsapp/webhook
+│   │   └── utils/
+│   │       ├── calendario.ts       # Geração de slots de horário
+│   │       ├── gerarProtocolo.ts   # Protocolo único AGD-YYYY-XXXX
+│   │       ├── notificacao.ts      # Envio de emails
+│   │       ├── sanitizar.ts        # Sanitização de inputs
+│   │       ├── validarHorario.ts   # Validação de conflitos
+│   │       └── whatsappAdapter.ts  # Adaptador Evolution API
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── .env                        # Variáveis de ambiente (não commitado)
 │
-├── backend/
-│   └── functions/
-│       ├── src/
-│       │   ├── index.ts              # Entry point — exporta todas as functions
-│       │   ├── availability.ts       # getAvailableSlots
-│       │   ├── booking.ts            # createBooking, cancelBooking
-│       │   ├── nichoConfig.ts        # getNichoConfig
-│       │   ├── whatsappWebhook.ts    # Webhook do WhatsApp
-│       │   ├── models/
-│       │   │   ├── Agendamento.ts
-│       │   │   ├── Nicho.ts
-│       │   │   ├── Prestador.ts
-│       │   │   └── Servico.ts
-│       │   └── utils/
-│       │       ├── gerarProtocolo.ts
-│       │       ├── validarHorario.ts
-│       │       └── whatsappAdapter.ts
-│       ├── package.json
-│       ├── tsconfig.json
-│       └── .env.example
+├── docs/                           # Frontend (GitHub Pages)
+│   ├── index.html                  # Página pública do negócio
+│   └── admin.html                  # Painel administrativo (SPA)
 │
-├── firestore/
-│   ├── firestore.rules
-│   ├── firestore.indexes.json
-│   └── seeds/                        # Dados de exemplo por nicho
+├── supabase/                       # Schemas e migrations SQL
+│   ├── schema.sql                  # Schema principal
+│   ├── evolucao-profiles.sql       # Negócios, personalização, integrações
+│   ├── usuarios.sql                # Tabela de autenticação
+│   ├── fix-fk-usuarios.sql         # Correção de FKs
+│   ├── add-cep-bairro.sql          # Campo bairro
+│   ├── rls-policies.sql            # Políticas RLS
+│   └── seed.sql                    # Dados de exemplo
 │
-├── bots/
-│   └── typebot-fluxo-agendamento.md  # Fluxo detalhado do bot
+├── bots/                           # Documentação do Typebot
+│   ├── typebot-fluxo-agendamento.md
+│   └── typebot-cloud-setup.md
 │
-├── config/
-│   └── nichos/                       # Configurações JSON por nicho
-│
-├── infra/
-│   ├── gcp-setup.md                  # Setup GCP + Firebase
-│   ├── arquitetura.md                # Diagrama de arquitetura
-│   └── secrets.md                    # Gerenciamento de segredos
-│
-├── public/
-│   └── index.html                    # Página do Firebase Hosting
-│
-├── firebase.json
-├── .firebaserc
+├── render.yaml                     # Config de deploy no Render
 ├── .gitignore
 └── README.md
 ```
 
 ---
 
-## 🚀 Setup Rápido
+## Setup Rápido
 
 ### Pré-requisitos
 
 - Node.js 18+
-- Firebase CLI (`npm install -g firebase-tools`)
-- Conta Google Cloud com faturamento habilitado
-- Projeto Firebase criado
+- Conta no [Supabase](https://supabase.com) (gratuito)
+- Conta no [Render](https://render.com) (gratuito)
 
-### 1. Clonar e instalar dependências
+### 1. Clonar e instalar
 
 ```bash
-git clone <seu-repo>
-cd plataforma-agendamentos
-cd backend/functions
+git clone https://github.com/exosoft-com-br/plataforma-agendamentos.git
+cd plataforma-agendamentos/server
 npm install
 ```
 
-### 2. Configurar o projeto Firebase
+### 2. Configurar Supabase
+
+1. Crie um projeto no [Supabase Dashboard](https://supabase.com/dashboard)
+2. No SQL Editor, execute na ordem:
+   - `supabase/schema.sql`
+   - `supabase/evolucao-profiles.sql`
+   - `supabase/usuarios.sql`
+   - `supabase/fix-fk-usuarios.sql`
+   - `supabase/add-cep-bairro.sql`
+   - `supabase/rls-policies.sql`
+   - `supabase/seed.sql` (opcional — dados de exemplo)
+
+### 3. Configurar variáveis de ambiente
 
 ```bash
-firebase login
-firebase use agendamentos-poc
-```
-
-### 3. Configurar variáveis de ambiente (desenvolvimento)
-
-```bash
-cd backend/functions
+cd server
 cp .env.example .env
-# Editar .env com seus valores reais
+# Editar .env com suas chaves do Supabase
 ```
 
-### 4. Rodar localmente com emuladores
+Variáveis necessárias:
+```
+SUPABASE_URL=https://SEU-PROJETO.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=sua-service-role-key
+JWT_SECRET=sua-chave-secreta-jwt
+ALLOWED_ORIGINS=http://localhost:3000,https://seu-dominio.com
+```
+
+### 4. Rodar localmente
 
 ```bash
-# Na raiz do projeto
-firebase emulators:start
+cd server
+npm run build
+npm start
 ```
 
-Acesse:
-- **Emulator UI:** http://localhost:4000
-- **Functions:** http://localhost:5001
-- **Firestore:** http://localhost:8080
-- **Hosting:** http://localhost:5000
+O servidor inicia em http://localhost:3000
 
-### 5. Carregar dados de exemplo
+### 5. Deploy no Render
 
-No painel do Emulator UI (http://localhost:4000/firestore), importe
-os arquivos de `firestore/seeds/` para popular o banco com dados de teste.
-
-### 6. Deploy em produção
-
-```bash
-# Configurar segredos no Secret Manager (ver infra/secrets.md)
-
-# Deploy completo
-firebase deploy
-
-# Ou deploy seletivo
-firebase deploy --only functions
-firebase deploy --only firestore:rules
-firebase deploy --only hosting
-```
+1. Conecte o repositório GitHub no [Render Dashboard](https://dashboard.render.com)
+2. O `render.yaml` configura tudo automaticamente
+3. Adicione as variáveis de ambiente no Render Dashboard
+4. Push no branch `master` dispara auto-deploy
 
 ---
 
-## 📡 API — Endpoints
+## API — Endpoints
 
-Todos os endpoints estão na região `southamerica-east1`.
+Base URL: `https://plataforma-agendamentos-api.onrender.com`
 
-### GET `/getAvailableSlots`
+### Auth
 
-Consulta horários disponíveis.
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/api/auth/register` | Criar conta (primeiro = admin) |
+| POST | `/api/auth/login` | Login email/senha |
+| POST | `/api/auth/google` | Login via Google OAuth |
+| POST | `/api/auth/facebook` | Login via Facebook OAuth |
+| GET | `/api/auth/me` | Dados do usuário logado |
+| GET | `/api/auth/usuarios` | Listar usuários (admin) |
+| POST | `/api/auth/usuarios` | Criar usuário (admin) |
+| DELETE | `/api/auth/usuarios/:id` | Remover usuário (admin) |
 
-| Parâmetro | Tipo | Obrigatório | Descrição |
-|-----------|------|-------------|-----------|
-| `prestadorId` | string | Sim | ID do prestador |
-| `servicoId` | string | Sim | ID do serviço |
-| `data` | string | Não | Data YYYY-MM-DD (padrão: hoje) |
+### Negócios
 
-```bash
-curl "https://REGION-PROJECT.cloudfunctions.net/getAvailableSlots?prestadorId=barbeiro-pedro&servicoId=corte-simples"
-```
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/api/negocios` | Criar negócio |
+| GET | `/api/negocios/:ownerId` | Listar negócios do dono |
+| PUT | `/api/negocios/:id` | Atualizar negócio |
+| DELETE | `/api/negocios/:id` | Excluir negócio (cascade) |
 
-### POST `/createBooking`
+### Agendamentos
 
-Cria um agendamento.
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| GET | `/api/availability` | Horários disponíveis |
+| POST | `/api/booking` | Criar agendamento |
+| POST | `/api/booking/cancel` | Cancelar agendamento |
+| GET | `/api/nicho` | Config do nicho |
 
-```bash
-curl -X POST "https://REGION-PROJECT.cloudfunctions.net/createBooking" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "nichoId": "barbearia",
-    "prestadorId": "barbeiro-pedro",
-    "servicoId": "corte-simples",
-    "clienteNome": "José Silva",
-    "clienteTelefone": "5511999999999",
-    "dataHora": "2026-03-04T09:00:00"
-  }'
-```
+### Personalização e Integrações
 
-### POST `/cancelBooking`
-
-Cancela um agendamento.
-
-```bash
-curl -X POST "https://REGION-PROJECT.cloudfunctions.net/cancelBooking" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "protocolo": "AGD-2026-A3F7",
-    "clienteTelefone": "5511999999999"
-  }'
-```
-
-### GET `/getNichoConfig`
-
-Retorna configuração completa do nicho.
-
-```bash
-curl "https://REGION-PROJECT.cloudfunctions.net/getNichoConfig?nichoId=barbearia"
-```
-
-### POST `/whatsappWebhook`
-
-Recebe mensagens do WhatsApp (usado pela Evolution API).
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| GET/PUT | `/api/negocios/:id/personalizacao` | Visual do negócio |
+| GET/PUT | `/api/profile/:userId` | Perfil do usuário |
+| GET/POST/PUT/DELETE | `/api/integracoes/email` | Integrações de email |
 
 ---
 
-## 🧪 Testando
+## Painel Admin
 
-### Com emuladores
+Acesse: https://exosoft-com-br.github.io/plataforma-agendamentos/admin.html
 
-```bash
-firebase emulators:start
-```
-
-### Testar endpoints manualmente
-
-```bash
-# Disponibilidade
-curl "http://localhost:5001/agendamentos-poc/southamerica-east1/getAvailableSlots?prestadorId=barbeiro-pedro&servicoId=corte-simples&data=2026-03-04"
-
-# Criar agendamento
-curl -X POST "http://localhost:5001/agendamentos-poc/southamerica-east1/createBooking" \
-  -H "Content-Type: application/json" \
-  -d '{"nichoId":"barbearia","prestadorId":"barbeiro-pedro","servicoId":"corte-simples","clienteNome":"Teste","clienteTelefone":"5511999999999","dataHora":"2026-03-04T09:00:00"}'
-```
+Funcionalidades:
+- Login com email/senha (Google e Facebook opcionais)
+- Gerenciamento de negócios (criar, editar, excluir)
+- Personalização visual (cores, fontes, logo)
+- Gerenciamento de serviços e agendamentos
+- Integrações de email/calendário
+- Controle de acesso por roles (admin/usuario)
 
 ---
 
-## 📚 Documentação Adicional
+## Roadmap
 
-- [Setup GCP + Firebase](infra/gcp-setup.md)
-- [Arquitetura](infra/arquitetura.md)
-- [Gerenciamento de Segredos](infra/secrets.md)
-- [Fluxo do Bot Typebot](bots/typebot-fluxo-agendamento.md)
-
----
-
-## 🗺️ Roadmap
-
-- [x] Backend com Cloud Functions
-- [x] Modelo de dados Firestore
-- [x] Integração WhatsApp (Evolution API)
-- [x] Fluxo conversacional (Typebot)
-- [ ] Painel admin (Firebase Auth + Hosting)
+- [x] Backend Express.js + Supabase
+- [x] Sistema de autenticação JWT
+- [x] Painel administrativo
+- [x] Personalização visual por negócio
+- [x] Busca de CEP via ViaCEP
+- [x] Deploy no Render + GitHub Pages
+- [x] Rate limiting e segurança
 - [ ] Notificações de lembrete (24h antes)
 - [ ] Relatórios e dashboard
-- [ ] Migração para Meta Business API
+- [ ] Integração WhatsApp (Evolution API)
 - [ ] Pagamento online integrado
 
 ---
 
-## 📄 Licença
+## Licença
 
 Projeto privado — uso interno.

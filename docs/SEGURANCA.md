@@ -22,10 +22,11 @@ Origens permitidas:
 - `http://localhost:3000` / `http://localhost:5173` (desenvolvimento)
 - Origens adicionais via `ALLOWED_ORIGINS` env var
 
-### 4. Rate Limiting (3 camadas)
+### 4. Rate Limiting (4 camadas)
 | Endpoint | Limite | Janela |
 |----------|--------|--------|
-| Geral (todos) | 100 req | 15 min |
+| Geral (todos) | 500 req | 15 min |
+| `/api/auth/*` | 30 req | 5 min |
 | `/api/booking` | 10 req | 15 min |
 | `/api/whatsapp/webhook` | 200 req | 1 min |
 
@@ -36,8 +37,17 @@ Origens permitidas:
 - **`validarDataHora()`**: Valida formato ISO 8601
 - Aplicado em **todas** as rotas (booking, availability, nichoConfig)
 
-### 6. Proteções Adicionais
+### 6. Autenticação JWT + OAuth
+- **JWT** com tokens de 24h, assinados com `JWT_SECRET`
+- **bcrypt** com 12 rounds para hash de senhas
+- **Roles**: `admin` (acesso total) e `usuario` (acesso restrito)
+- Primeiro usuário registrado recebe automaticamente role `admin`
+- **Google OAuth**: Verificação de ID token via `google-auth-library`
+- **Facebook OAuth**: Verificação via Graph API (`debug_token` + `/me`)
+
+### 7. Proteções Adicionais
 - Body size limitado a **10KB** (`express.json({ limit: "10kb" })`)
+- **Trust proxy** habilitado para IP correto atrás do Render
 - **404 handler** para rotas não encontradas
 - Variáveis sensíveis apenas via **environment variables** (nunca hardcoded)
 - `.env` no `.gitignore`
@@ -49,8 +59,18 @@ Origens permitidas:
 | `SUPABASE_URL` | ✅ | URL do projeto Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Chave secreta (bypass RLS) |
 | `SUPABASE_ANON_KEY` | ⚠️ | Fallback — prefira service_role |
+| `JWT_SECRET` | ✅ | Chave secreta para assinar tokens JWT |
 | `PORT` | ❌ | Porta do servidor (default: 3000) |
 | `ALLOWED_ORIGINS` | ❌ | Origens CORS extras (vírgula-separado) |
+| `GOOGLE_CLIENT_ID` | ❌ | Client ID para login com Google |
+| `FACEBOOK_APP_ID` | ❌ | App ID para login com Facebook |
+| `FACEBOOK_APP_SECRET` | ❌ | App Secret para login com Facebook |
+| `SMTP_HOST` | ❌ | Servidor SMTP para convites de calendário |
+| `SMTP_PORT` | ❌ | Porta SMTP (default: 587) |
+| `SMTP_USER` | ❌ | Usuário SMTP |
+| `SMTP_PASS` | ❌ | Senha SMTP |
+| `SMTP_FROM` | ❌ | E-mail remetente |
+| `WEBHOOK_AUTH_TOKEN` | ❌ | Token de autenticação para webhooks |
 
 ## Deploy Seguro no Render
 

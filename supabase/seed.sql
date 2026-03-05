@@ -1,5 +1,5 @@
 -- ============================================================
--- Seed: Dados de teste (mesmos do Firebase)
+-- Seed: Dados de teste para a plataforma de agendamentos
 -- ============================================================
 
 -- NICHO: Barbearia
