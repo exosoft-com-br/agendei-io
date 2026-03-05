@@ -1199,10 +1199,16 @@ async function criarUsuario() {
 // INIT — verificar sessão existente
 // ========================================================================
 if (AUTH_TOKEN && CURRENT_USER) {
-  // Verificar se token ainda é válido
+  // Verificar se token ainda é válido e atualizar dados do usuário
   fetch(`${API_URL}/api/auth/me`, { headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` } })
     .then(r => { if (r.ok) return r.json(); throw new Error('expired'); })
-    .then(() => iniciarPainel())
+    .then(data => {
+      if (data.usuario) {
+        CURRENT_USER = { ...CURRENT_USER, ...data.usuario };
+        localStorage.setItem('currentUser', JSON.stringify(CURRENT_USER));
+      }
+      iniciarPainel();
+    })
     .catch(() => logout());
 } else {
   document.getElementById('loginOverlay').classList.remove('hidden');
