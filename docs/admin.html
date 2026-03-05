@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Admin — Plataforma de Agendamentos</title>
   <style>
     :root {
@@ -717,6 +720,7 @@ document.addEventListener('keydown', e => {
 // INIT PANEL
 // ========================================================================
 function iniciarPainel() {
+  console.log('[ADMIN] iniciarPainel() chamado. CURRENT_USER:', JSON.stringify(CURRENT_USER));
   document.getElementById('loginOverlay').classList.add('hidden');
   document.getElementById('navbar').style.display = 'flex';
   document.getElementById('mainContent').style.display = 'block';
@@ -818,12 +822,24 @@ async function buscarCep(prefix) {
 // NEGÓCIOS
 // ========================================================================
 async function carregarNegocios() {
-  const ownerId = CURRENT_USER.ownerId;
+  const ownerId = CURRENT_USER?.ownerId || CURRENT_USER?.id;
+  console.log('[ADMIN] carregarNegocios() ownerId:', ownerId);
+  if (!ownerId) {
+    console.warn('[ADMIN] ownerId não encontrado, pulando carregamento');
+    negociosCache = [];
+    renderNegocios();
+    return;
+  }
   try {
     const data = await apiFetch(`/negocios/${ownerId}`);
     negociosCache = data.negocios || [];
     renderNegocios();
-  } catch (e) { showAlert('error', 'Erro ao carregar negócios: ' + e.message); }
+  } catch (e) {
+    console.error('[ADMIN] Erro ao carregar negócios:', e);
+    showAlert('error', 'Erro ao carregar negócios: ' + e.message);
+    negociosCache = [];
+    renderNegocios();
+  }
 }
 
 function renderNegocios() {
