@@ -1630,9 +1630,20 @@
           document.getElementById('agendamentosEmpty').style.display = 'block';
           return;
         }
+        // Buscar nomes dos serviços
+        const servicoIds = [...new Set(agendamentos.map(ag => ag.servico_id).filter(Boolean))];
+        let servicosMap = {};
+        if (servicoIds.length) {
+          try {
+            const servicosResp = await apiFetch(`/servicos?ids=${servicoIds.join(',')}`);
+            (servicosResp.servicos||[]).forEach(s => { servicosMap[s.id] = s.nome; });
+          } catch {}
+        }
         agendamentos.forEach(ag => {
           const hora = ag.data_hora?.split('T')[1]?.substring(0,5) || ag.data_hora;
-          tbody.innerHTML += `<tr><td><strong>${hora}</strong></td><td>${ag.cliente_nome||'—'}</td><td>${ag.servico_id||'—'}</td><td><span class="badge badge-active">${ag.status||'—'}</span></td><td style="font-size:.8rem">${ag.protocolo||'—'}</td></tr>`;
+          const clienteTelefone = ag.cliente_telefone || ag.telefone || ag.telefone_comercial || '—';
+          const servicoNome = ag.servico_nome || servicosMap[ag.servico_id] || ag.servico_id || '—';
+          tbody.innerHTML += `<tr><td><strong>${hora}</strong></td><td>${ag.cliente_nome||'—'}<br><span style='font-size:.85em;color:#888'>${clienteTelefone}</span></td><td>${servicoNome}</td><td><span class="badge badge-active">${ag.status||'—'}</span></td><td style="font-size:.8rem">${ag.protocolo||'—'}</td></tr>`;
         });
         document.getElementById('agendamentosTable').style.display = 'table';
         document.getElementById('agendamentosEmpty').style.display = 'none';

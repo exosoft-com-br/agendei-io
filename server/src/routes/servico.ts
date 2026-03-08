@@ -216,24 +216,31 @@ servicoRouter.delete("/prestadores/:prestadorId", async (req: Request, res: Resp
  */
 servicoRouter.get("/servicos", async (req: Request, res: Response) => {
   try {
+    const idsParam = req.query.ids as string;
     const nichoId = sanitizarId((req.query.nichoId as string) || "");
-    if (!nichoId) {
-      res.status(400).json({ erro: "Parâmetro obrigatório: nichoId" });
+    let query = supabase.from("servicos").select("*, prestadores(nome)");
+    if (idsParam) {
+      // Buscar por múltiplos IDs
+      const ids = idsParam.split(',').map((id) => id.trim()).filter(Boolean);
+      if (ids.length === 0) {
+        res.status(400).json({ erro: "Parâmetro ids inválido." });
+        return;
+      }
+      query = query.in('id', ids);
+    } else if (nichoId) {
+      query = query.eq("nicho_id", nichoId);
+    } else {
+      res.status(400).json({ erro: "Parâmetro obrigatório: nichoId ou ids" });
       return;
     }
+    query = query.order("criado_em", { ascending: false });
 
-    const { data, error } = await supabase
-      .from("servicos")
-      .select("*, prestadores(nome)")
-      .eq("nicho_id", nichoId)
-      .order("criado_em", { ascending: false });
-
+    const { data, error } = await query;
     if (error) {
       console.error("Erro ao listar serviços:", error);
       res.status(500).json({ erro: "Erro ao listar serviços." });
       return;
     }
-
     const servicos = (data || []).map((s: any) => ({
       id: s.id,
       nichoId: s.nicho_id,
@@ -245,7 +252,6 @@ servicoRouter.get("/servicos", async (req: Request, res: Response) => {
       ativo: s.ativo,
       criadoEm: s.criado_em,
     }));
-
     res.json({ servicos });
   } catch (erro) {
     console.error("Erro ao listar serviços:", erro);

@@ -44,12 +44,36 @@ async function salvarNegocio() {
   window.editandoNegocioId = null;
 }
 
-function gerarLinksNegocio(id) {
+async function gerarLinksNegocio(id) {
   const baseUrl = 'https://exosoft-com-br.github.io/plataforma-agendamentos/';
   const linkAgendamento = `${baseUrl}?negocio=${id}`;
   const linkAgenda = `${window.location.origin}/agenda/agenda.html?nichoId=${id}`;
   document.getElementById('linkAgendamento').value = linkAgendamento;
   document.getElementById('linkAgenda').value = linkAgenda;
+
+  // Buscar serviços do negócio para gerar links de agenda por serviço
+  let servicos = [];
+  try {
+    const resp = await apiFetch(`/negocio/${id}/publico`);
+    servicos = (resp.servicos || []);
+  } catch {}
+  const linksServicosDiv = document.getElementById('linksServicos');
+  if (linksServicosDiv) {
+    if (servicos.length) {
+      linksServicosDiv.innerHTML = '<label style="margin-top:8px">Links de agenda por serviço:</label>' +
+        servicos.map(s =>
+          `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <input type="text" id="linkAgendaServico_${s.id}" value="${window.location.origin}/agenda/agenda.html?servicoId=${s.id}" readonly style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc">
+            <button class="btn btn-outline btn-sm" onclick="copiarLink('linkAgendaServico_${s.id}')">Copiar</button>
+            <span style="font-size:.92em;color:#555">${s.nome}</span>
+          </div>`
+        ).join('');
+      linksServicosDiv.style.display = 'block';
+    } else {
+      linksServicosDiv.innerHTML = '';
+      linksServicosDiv.style.display = 'none';
+    }
+  }
   document.getElementById('linksNegocio').style.display = 'block';
 }
 
@@ -65,10 +89,27 @@ async function carregarNegocios() {
   el.innerHTML = '';
   try {
     const data = await apiFetch('/negocios');
-    (data.negocios||[]).forEach(n => {
+    for (const n of (data.negocios||[])) {
       const baseUrl = 'https://exosoft-com-br.github.io/plataforma-agendamentos/';
       const linkAgendamento = `${baseUrl}?negocio=${n.id}`;
       const linkAgenda = `${window.location.origin}/agenda/agenda.html?nichoId=${n.id}`;
+      // Buscar serviços para cada negócio
+      let servicos = [];
+      try {
+        const resp = await apiFetch(`/negocio/${n.id}/publico`);
+        servicos = (resp.servicos || []);
+      } catch {}
+      let linksServicosHtml = '';
+      if (servicos.length) {
+        linksServicosHtml = '<div style="margin-top:6px"><label style="font-size:.95em">Links de agenda por serviço:</label>' +
+          servicos.map(s =>
+            `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <input type="text" id="linkAgendaServicoList_${n.id}_${s.id}" value="${window.location.origin}/agenda/agenda.html?servicoId=${s.id}" readonly style="flex:1;padding:6px;border-radius:6px;border:1px solid #ccc;font-size:.95em">
+              <button class="btn btn-outline btn-sm" onclick="copiarLink('linkAgendaServicoList_${n.id}_${s.id}')">Copiar</button>
+              <span style="font-size:.92em;color:#555">${s.nome}</span>
+            </div>`
+          ).join('') + '</div>';
+      }
       el.innerHTML += `
         <div class='negocio-card'>
           <div class='negocio-header'>
@@ -85,10 +126,11 @@ async function carregarNegocios() {
               <span>🔗 Link de agendamento: <a href='${linkAgendamento}' target='_blank'>${linkAgendamento}</a></span><br>
               <span>📅 Link de agenda: <a href='${linkAgenda}' target='_blank'>${linkAgenda}</a></span>
             </div>
+            ${linksServicosHtml}
           </div>
         </div>
       `;
-    });
+    }
   } catch (e) { el.innerHTML = '<div class="empty">Erro ao carregar negócios.</div>'; }
 }
 
@@ -108,7 +150,7 @@ async function editarNegocio(id) {
   document.getElementById('cidade').value = n.cidade || '';
   document.getElementById('estado').value = n.estado || '';
   if (id) {
-    gerarLinksNegocio(id);
+    await gerarLinksNegocio(id);
     document.getElementById('linksNegocio').style.display = 'block';
   }
 }
