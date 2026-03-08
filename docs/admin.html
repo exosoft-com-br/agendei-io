@@ -347,7 +347,7 @@
       if (!nichoId && !prestadorId && !data && !clienteNome && !clienteTelefone) return;
       let url = `/booking?`;
       if (nichoId) url += `nichoId=${encodeURIComponent(nichoId)}&`;
-      if (prestadorId) url += `prestadorId=${encodeURIComponent(prestadorId)}&`;
+      if (prestadorId && prestadorId !== "") url += `prestadorId=${encodeURIComponent(prestadorId)}&`;
       if (data) url += `data=${encodeURIComponent(data)}&`;
       if (clienteNome) url += `clienteNome=${encodeURIComponent(clienteNome)}&`;
       if (clienteTelefone) url += `clienteTelefone=${encodeURIComponent(clienteTelefone)}&`;
@@ -478,6 +478,36 @@
         <button class="btn btn-success" onclick="criarNegocio()">✅ Cadastrar</button>
         <button class="btn btn-outline" onclick="toggleNovoNegocio()">Cancelar</button>
       </div>
+      <div id="linkAgendaNegocio" style="margin-top:18px;display:none">
+        <label>Link da Agenda por Prestador:</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="text" id="inputLinkAgendaNegocio" readonly style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc">
+          <button class="btn btn-outline btn-sm" onclick="copiarLinkAgendaNegocio()">Copiar</button>
+        </div>
+      </div>
+    <script>
+    // Exibe o link de agenda por prestador ao criar negócio
+    async function criarNegocio() {
+      // ...código já existente para criar negócio...
+      // Após criar com sucesso:
+      // Supondo que o backend retorna o id do novo negócio em "novoNegocioId"
+      // Exemplo:
+      // const novoNegocioId = ...
+      // Substitua pelo id real retornado!
+      const novoNegocioId = window.ultimoNegocioCriadoId;
+      if (novoNegocioId) {
+        const link = `${window.location.origin}/admin.html#agenda-prestador?nichoId=${novoNegocioId}`;
+        document.getElementById('inputLinkAgendaNegocio').value = link;
+        document.getElementById('linkAgendaNegocio').style.display = 'block';
+      }
+    }
+    function copiarLinkAgendaNegocio() {
+      const input = document.getElementById('inputLinkAgendaNegocio');
+      input.select();
+      document.execCommand('copy');
+      showAlert('success', 'Link copiado!');
+    }
+    </script>
     </div>
   </div>
 
