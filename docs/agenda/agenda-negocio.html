@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agenda do Negócio</title>
+  <link rel="stylesheet" href="../admin.css">
+</head>
+<body>
+  <div class="main">
+    <h1>Agenda do Negócio</h1>
+    <div class="card">
+      <div id="negocioInfo"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Data</label><input type="date" id="data"></div>
+        <div class="form-group"><label>Cliente (nome)</label><input type="text" id="clienteNome" placeholder="Buscar por nome"></div>
+        <div class="form-group"><label>Telefone</label><input type="text" id="clienteTelefone" placeholder="Buscar por telefone"></div>
+      </div>
+      <div class="table-scroll">
+        <table id="agendaTable" style="display:none">
+          <thead><tr><th>Hora</th><th>Cliente</th><th>Telefone</th><th>Serviço</th><th>Status</th><th>Protocolo</th></tr></thead>
+          <tbody id="agendaBody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="agendaEmpty" style="display:none"><div class="empty-icon">📅</div><p>Nenhum agendamento encontrado.</p></div>
+    </div>
+  </div>
+  <script src="agenda-negocio.js"></script>
+</body>
+</html>

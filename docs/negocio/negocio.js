@@ -48,8 +48,12 @@ async function gerarLinksNegocio(id) {
   const baseUrl = 'https://exosoft-com-br.github.io/plataforma-agendamentos/';
   const linkAgendamento = `${baseUrl}?negocio=${id}`;
   const linkAgenda = `${window.location.origin}/agenda/agenda.html?nichoId=${id}`;
+  const linkAgendaNegocio = `${window.location.origin}/agenda/agenda-negocio.html?negocioId=${id}`;
   document.getElementById('linkAgendamento').value = linkAgendamento;
   document.getElementById('linkAgenda').value = linkAgenda;
+  // Novo campo: link de agenda por negócio
+  const linkAgendaNegocioInput = document.getElementById('linkAgendaNegocio');
+  if (linkAgendaNegocioInput) linkAgendaNegocioInput.value = linkAgendaNegocio;
 
   // Buscar serviços do negócio para gerar links de agenda por serviço
   let servicos = [];
@@ -59,8 +63,15 @@ async function gerarLinksNegocio(id) {
   } catch {}
   const linksServicosDiv = document.getElementById('linksServicos');
   if (linksServicosDiv) {
+    let html = '';
+    html += `<label style='margin-top:8px'>Link de agenda do negócio:</label>`;
+    html += `<div style='display:flex;align-items:center;gap:8px;margin-bottom:8px'>
+      <input type='text' id='linkAgendaNegocio' readonly style='flex:1;padding:8px;border-radius:6px;border:1px solid #ccc'>
+      <button class='btn btn-outline btn-sm' onclick="copiarLink('linkAgendaNegocio')">Copiar</button>
+      <a class='btn btn-outline btn-sm' href='${window.location.origin}/agenda/agenda-negocio.html?negocioId=${id}' target='_blank'>Abrir</a>
+    </div>`;
     if (servicos.length) {
-      linksServicosDiv.innerHTML = '<label style="margin-top:8px">Links de agenda por serviço:</label>' +
+      html += '<label style="margin-top:8px">Links de agenda por serviço:</label>' +
         servicos.map(s =>
           `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
             <input type="text" id="linkAgendaServico_${s.id}" value="${window.location.origin}/agenda/agenda.html?servicoId=${s.id}" readonly style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc">
@@ -68,11 +79,9 @@ async function gerarLinksNegocio(id) {
             <span style="font-size:.92em;color:#555">${s.nome}</span>
           </div>`
         ).join('');
-      linksServicosDiv.style.display = 'block';
-    } else {
-      linksServicosDiv.innerHTML = '';
-      linksServicosDiv.style.display = 'none';
     }
+    linksServicosDiv.innerHTML = html;
+    linksServicosDiv.style.display = 'block';
   }
   document.getElementById('linksNegocio').style.display = 'block';
 }
@@ -100,8 +109,15 @@ async function carregarNegocios() {
         servicos = (resp.servicos || []);
       } catch {}
       let linksServicosHtml = '';
+      // Link de agenda do negócio
+      linksServicosHtml += `<div style='margin-top:6px'><label style='font-size:.95em'>Link de agenda do negócio:</label>
+        <div style='display:flex;align-items:center;gap:8px;margin-bottom:8px'>
+          <input type='text' id='linkAgendaNegocioList_${n.id}' value='${window.location.origin}/agenda/agenda-negocio.html?negocioId=${n.id}' readonly style='flex:1;padding:6px;border-radius:6px;border:1px solid #ccc;font-size:.95em'>
+          <button class='btn btn-outline btn-sm' onclick="copiarLink('linkAgendaNegocioList_${n.id}')">Copiar</button>
+          <a class='btn btn-outline btn-sm' href='${window.location.origin}/agenda/agenda-negocio.html?negocioId=${n.id}' target='_blank'>Abrir</a>
+        </div></div>`;
       if (servicos.length) {
-        linksServicosHtml = '<div style="margin-top:6px"><label style="font-size:.95em">Links de agenda por serviço:</label>' +
+        linksServicosHtml += '<div><label style="font-size:.95em">Links de agenda por serviço:</label>' +
           servicos.map(s =>
             `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
               <input type="text" id="linkAgendaServicoList_${n.id}_${s.id}" value="${window.location.origin}/agenda/agenda.html?servicoId=${s.id}" readonly style="flex:1;padding:6px;border-radius:6px;border:1px solid #ccc;font-size:.95em">
