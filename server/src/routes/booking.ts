@@ -258,7 +258,7 @@ bookingRouter.post("/booking/cancel", async (req: Request, res: Response) => {
 bookingRouter.get("/booking", async (req: Request, res: Response) => {
   try {
     const { data, clienteNome, clienteTelefone, nichoId, prestadorId } = req.query;
-    let query = supabase.from("agendamentos").select("*", { count: "exact" });
+    let query = supabase.from("agendamentos").select("*", { count: "exact", head: false });
 
     if (data) {
       // Filtra por data (ignora hora)

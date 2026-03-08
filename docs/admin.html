@@ -401,6 +401,26 @@
     <div class="card">
       <h2>🏢 Meus Negócios</h2>
       <div id="negociosList"></div>
+      <script>
+      // Exibe links de agenda por negócio
+      async function renderNegociosList() {
+        const el = document.getElementById('negociosList');
+        el.innerHTML = '';
+        try {
+          const data = await apiFetch('/negocios');
+          (data.negocios||[]).forEach(n => {
+            const agendaLink = `${window.location.origin}/admin.html#agenda-prestador?nichoId=${n.id}`;
+            el.innerHTML += `<div class='negocio-card'><div class='negocio-header'><div class='negocio-info'><strong>${n.nome_fantasia||n.nome_publico||n.nome||n.id}</strong><div class='negocio-detail'>${n.descricao||''}</div></div><div class='negocio-actions'><a href='${agendaLink}' target='_blank' class='btn btn-outline btn-sm'>🔗 Agenda</a></div></div></div>`;
+          });
+        } catch (e) { el.innerHTML = '<div class="empty">Erro ao carregar negócios.</div>'; }
+      }
+      // Chama ao exibir a seção de negócios
+      const oldShowSectionNegocios = window.showSection;
+      window.showSection = function(sec, el) {
+        if (sec === 'negocios') renderNegociosList();
+        if (oldShowSectionNegocios) oldShowSectionNegocios(sec, el);
+      }
+      </script>
       <div class="btn-group">
         <button class="btn btn-primary" onclick="toggleNovoNegocio()">+ Novo Negócio</button>
       </div>
