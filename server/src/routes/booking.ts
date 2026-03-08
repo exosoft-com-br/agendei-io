@@ -298,7 +298,7 @@ bookingRouter.get("/booking", async (req: Request, res: Response) => {
       query = query.in("prestador_id", prestadorIds);
       query = query.order("data_hora", { ascending: true });
       const result = await query;
-      agendamentos = result.data;
+      agendamentos = result.data || [];
       error = result.error;
     } else {
       // Filtro padrão (sem negocioId)
@@ -324,7 +324,7 @@ bookingRouter.get("/booking", async (req: Request, res: Response) => {
       }
       query = query.order("data_hora", { ascending: true });
       const result = await query;
-      agendamentos = result.data;
+      agendamentos = result.data || [];
       error = result.error;
     }
     if (error) {

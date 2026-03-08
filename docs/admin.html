@@ -1100,6 +1100,7 @@
         const desc = n.descricao || '';
         const cnpj = n.cnpjCpf || '';
         const linkAgendamento = `${baseUrl}?negocio=${n.id}`;
+        const linkAgenda = `${baseUrl}agenda/agenda.html?nichoId=${n.nichoId}`;
 
         let endCompleto = [end, bairro].filter(Boolean).join(', ');
         if (cidade) endCompleto += (endCompleto ? ' — ' : '') + cidade;
@@ -1122,6 +1123,10 @@
                 <div class="negocio-detail" style="margin-top:8px">
                   🔗 <strong>Link de agendamento:</strong>
                   <input type="text" value="${linkAgendamento}" readonly onclick="this.select();document.execCommand('copy');showAlert('success','Link copiado!')" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:.8rem;cursor:pointer;margin-top:4px" title="Clique para copiar">
+                </div>
+                <div class="negocio-detail" style="margin-top:8px">
+                  📅 <strong>Link de agenda:</strong>
+                  <input type="text" value="${linkAgenda}" readonly onclick="this.select();document.execCommand('copy');showAlert('success','Link copiado!')" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:.8rem;cursor:pointer;margin-top:4px" title="Clique para copiar">
                 </div>
               </div>
               <div class="negocio-actions">

@@ -1,0 +1,24 @@
+/* Estilo compartilhado para agenda-negocio.html (pode ser expandido conforme necessário) */
+:root {
+  --primary: #667eea; --primary-dark: #5a6fd6; --secondary: #764ba2;
+  --bg: #f0f2f5; --card: #fff; --text: #333; --text-light: #666;
+  --border: #e0e0e0; --success: #4caf50; --error: #e53935; --warn: #ff9800;
+}
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+.main { max-width: 600px; margin: 0 auto; padding: 24px 8px; }
+.card { background: var(--card); border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); border: 1px solid var(--border); }
+h1 { color: var(--primary); font-size: 1.4rem; margin-bottom: 18px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+@media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+.form-group label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 4px; color: var(--text-light); }
+.form-group input { width: 100%; padding: 10px 12px; border: 2px solid var(--border); border-radius: 8px; font-size: .95rem; font-family: inherit; transition: border-color .2s; }
+.form-group input:focus { outline: none; border-color: var(--primary); }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background: #fff; margin-bottom: 10px; }
+th, td { padding: 10px 8px; border-bottom: 1px solid var(--border); text-align: left; font-size: .97rem; }
+th { background: var(--bg); color: var(--primary); font-weight: 600; }
+tr:last-child td { border-bottom: none; }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 8px; font-size: .85em; font-weight: 600; }
+.badge-active { background: var(--primary); color: #fff; }
+.empty { text-align: center; color: var(--text-light); margin: 24px 0; }
+.empty-icon { font-size: 2.5rem; margin-bottom: 8px; }
