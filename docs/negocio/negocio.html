@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Negócios - Plataforma de Agendamentos</title>
+  <link rel="stylesheet" href="../admin.css">
+</head>
+<body>
+  <div class="main">
+    <h1>Cadastro e Edição de Negócios</h1>
+    <div class="card" id="formNegocio">
+      <div class="form-group">
+        <label>Nicho (ID) *</label>
+        <input type="text" id="nichoId" placeholder="ex: barbearia, clinica, salao">
+      </div>
+      <div class="form-group">
+        <label>Nome Fantasia *</label>
+        <input type="text" id="nomeFantasia" placeholder="Ex: Barbearia VIP">
+      </div>
+      <div class="form-group">
+        <label>Descrição</label>
+        <textarea id="descricao" rows="2" placeholder="Breve descrição do negócio"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Telefone Comercial</label>
+          <input type="tel" id="telefone" placeholder="5511999999999">
+        </div>
+        <div class="form-group">
+          <label>CNPJ/CPF</label>
+          <input type="text" id="cnpjCpf" placeholder="00.000.000/0000-00">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>CEP</label>
+          <input type="text" id="cep" placeholder="00000-000" maxlength="9">
+        </div>
+        <div class="form-group">
+          <label>Endereço</label>
+          <input type="text" id="endereco" placeholder="Rua, Avenida...">
+        </div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group">
+          <label>Bairro</label>
+          <input type="text" id="bairro" placeholder="Bairro">
+        </div>
+        <div class="form-group">
+          <label>Cidade</label>
+          <input type="text" id="cidade" placeholder="São Paulo">
+        </div>
+        <div class="form-group">
+          <label>UF</label>
+          <input type="text" id="estado" placeholder="SP" maxlength="2" style="text-transform:uppercase">
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-success" onclick="salvarNegocio()">💾 Salvar</button>
+        <button class="btn btn-outline" onclick="limparFormulario()">Limpar</button>
+      </div>
+      <div id="linksNegocio" style="margin-top:18px;display:none">
+        <label>Links:</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <input type="text" id="linkAgendamento" readonly style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc">
+          <button class="btn btn-outline btn-sm" onclick="copiarLink('linkAgendamento')">Copiar</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="text" id="linkAgenda" readonly style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc">
+          <button class="btn btn-outline btn-sm" onclick="copiarLink('linkAgenda')">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="card" id="listaNegocios">
+      <h2>Meus Negócios</h2>
+      <div id="negociosList"></div>
+    </div>
+  </div>
+  <script src="negocio.js"></script>
+</body>
+</html>
