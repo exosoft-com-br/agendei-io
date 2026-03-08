@@ -257,31 +257,76 @@ bookingRouter.post("/booking/cancel", async (req: Request, res: Response) => {
  */
 bookingRouter.get("/booking", async (req: Request, res: Response) => {
   try {
-    const { data, clienteNome, clienteTelefone, nichoId, prestadorId } = req.query;
-    let query = supabase.from("agendamentos").select("*", { count: "exact", head: false });
+    const { data, clienteNome, clienteTelefone, nichoId, prestadorId, negocioId } = req.query;
+    let agendamentos = [];
+    let error = null;
 
-    if (data) {
-      // Filtra por data (ignora hora)
-      const start = new Date(data as string);
-      const end = new Date(start);
-      end.setDate(start.getDate() + 1);
-      query = query.gte("data_hora", start.toISOString()).lt("data_hora", end.toISOString());
+    // Se negocioId for informado, buscar todos os prestadores do negócio
+    if (negocioId) {
+      // Buscar IDs dos prestadores vinculados ao negócio
+      const { data: prestadores, error: errPrest } = await supabase
+        .from("prestadores")
+        .select("id")
+        .eq("negocio_id", negocioId);
+      if (errPrest) {
+        res.status(500).json({ erro: "Erro ao buscar prestadores do negócio." });
+        return;
+      }
+      const prestadorIds = (prestadores || []).map((p: any) => p.id);
+      if (!prestadorIds.length) {
+        res.json({ agendamentos: [] });
+        return;
+      }
+      let query = supabase.from("agendamentos").select("*", { count: "exact", head: false });
+      if (data) {
+        const start = new Date(data as string);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 1);
+        query = query.gte("data_hora", start.toISOString()).lt("data_hora", end.toISOString());
+      }
+      if (clienteNome) {
+        query = query.ilike("cliente_nome", `%${clienteNome}%`);
+      }
+      if (clienteTelefone) {
+        const tel = (clienteTelefone as string).replace(/\D/g, "");
+        query = query.ilike("cliente_telefone", `%${tel}%`);
+      }
+      if (nichoId) {
+        query = query.eq("nicho_id", nichoId);
+      }
+      // Filtra por todos os prestadores do negócio
+      query = query.in("prestador_id", prestadorIds);
+      query = query.order("data_hora", { ascending: true });
+      const result = await query;
+      agendamentos = result.data;
+      error = result.error;
+    } else {
+      // Filtro padrão (sem negocioId)
+      let query = supabase.from("agendamentos").select("*", { count: "exact", head: false });
+      if (data) {
+        const start = new Date(data as string);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 1);
+        query = query.gte("data_hora", start.toISOString()).lt("data_hora", end.toISOString());
+      }
+      if (clienteNome) {
+        query = query.ilike("cliente_nome", `%${clienteNome}%`);
+      }
+      if (clienteTelefone) {
+        const tel = (clienteTelefone as string).replace(/\D/g, "");
+        query = query.ilike("cliente_telefone", `%${tel}%`);
+      }
+      if (nichoId) {
+        query = query.eq("nicho_id", nichoId);
+      }
+      if (prestadorId) {
+        query = query.eq("prestador_id", prestadorId);
+      }
+      query = query.order("data_hora", { ascending: true });
+      const result = await query;
+      agendamentos = result.data;
+      error = result.error;
     }
-    if (clienteNome) {
-      query = query.ilike("cliente_nome", `%${clienteNome}%`);
-    }
-    if (clienteTelefone) {
-      const tel = (clienteTelefone as string).replace(/\D/g, "");
-      query = query.ilike("cliente_telefone", `%${tel}%`);
-    }
-    if (nichoId) {
-      query = query.eq("nicho_id", nichoId);
-    }
-    if (prestadorId) {
-      query = query.eq("prestador_id", prestadorId);
-    }
-    query = query.order("data_hora", { ascending: true });
-    const { data: agendamentos, error } = await query;
     if (error) {
       res.status(500).json({ erro: "Erro ao buscar agendamentos." });
       return;

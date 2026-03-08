@@ -55,21 +55,22 @@ async function gerarLinksNegocio(id) {
   const linkAgendaNegocioInput = document.getElementById('linkAgendaNegocio');
   if (linkAgendaNegocioInput) linkAgendaNegocioInput.value = linkAgendaNegocio;
 
-  // Buscar serviços do negócio para gerar links de agenda por serviço
-  let servicos = [];
-  try {
-    const resp = await apiFetch(`/negocio/${id}/publico`);
-    servicos = (resp.servicos || []);
-  } catch {}
+  // Link de agenda do negócio sempre disponível
   const linksServicosDiv = document.getElementById('linksServicos');
   if (linksServicosDiv) {
     let html = '';
     html += `<label style='margin-top:8px'>Link de agenda do negócio:</label>`;
     html += `<div style='display:flex;align-items:center;gap:8px;margin-bottom:8px'>
-      <input type='text' id='linkAgendaNegocio' readonly style='flex:1;padding:8px;border-radius:6px;border:1px solid #ccc'>
+      <input type='text' id='linkAgendaNegocio' value='${window.location.origin}/agenda/agenda-negocio.html?negocioId=${id}' readonly style='flex:1;padding:8px;border-radius:6px;border:1px solid #ccc'>
       <button class='btn btn-outline btn-sm' onclick="copiarLink('linkAgendaNegocio')">Copiar</button>
       <a class='btn btn-outline btn-sm' href='${window.location.origin}/agenda/agenda-negocio.html?negocioId=${id}' target='_blank'>Abrir</a>
     </div>`;
+    // Buscar serviços do negócio para gerar links de agenda por serviço
+    let servicos = [];
+    try {
+      const resp = await apiFetch(`/negocio/${id}/publico`);
+      servicos = (resp.servicos || []);
+    } catch {}
     if (servicos.length) {
       html += '<label style="margin-top:8px">Links de agenda por serviço:</label>' +
         servicos.map(s =>
