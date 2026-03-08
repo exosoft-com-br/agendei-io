@@ -81,8 +81,10 @@ async function carregarAgenda() {
     }
     agendamentos.forEach(ag => {
       const hora = ag.data_hora?.split('T')[1]?.substring(0,5) || ag.data_hora;
-      const servicoNome = servicosMap[ag.servico_id] || ag.servico_id || '—';
-      tbody.innerHTML += `<tr><td><strong>${hora}</strong></td><td>${ag.cliente_nome||'—'}</td><td>${ag.cliente_telefone||'—'}</td><td>${servicoNome}</td><td><span class="badge badge-active">${ag.status||'—'}</span></td><td style="font-size:.8rem">${ag.protocolo||'—'}</td></tr>`;
+      // Garante que telefone e serviço sejam exibidos mesmo se vierem em campos alternativos
+      const clienteTelefone = ag.cliente_telefone || ag.telefone || ag.telefone_comercial || '—';
+      const servicoNome = ag.servico_nome || servicosMap[ag.servico_id] || ag.servico_id || '—';
+      tbody.innerHTML += `<tr><td><strong>${hora}</strong></td><td>${ag.cliente_nome||'—'}</td><td>${clienteTelefone}</td><td>${servicoNome}</td><td><span class="badge badge-active">${ag.status||'—'}</span></td><td style="font-size:.8rem">${ag.protocolo||'—'}</td></tr>`;
     });
     document.getElementById('agendaTable').style.display = 'table';
     document.getElementById('agendaEmpty').style.display = 'none';

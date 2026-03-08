@@ -33,8 +33,12 @@ async function salvarNegocio() {
     data = await apiFetch('/negocios', { method: 'POST', body: JSON.stringify(body) });
   }
   if (data.erro) { alert(data.erro); return; }
+  // Garante que o id correto seja usado (preferencialmente do retorno da API)
   const id = data.negocio?.id || window.editandoNegocioId;
-  gerarLinksNegocio(id);
+  if (id) {
+    gerarLinksNegocio(id);
+    document.getElementById('linksNegocio').style.display = 'block';
+  }
   limparFormulario();
   carregarNegocios();
   window.editandoNegocioId = null;
@@ -82,7 +86,10 @@ async function editarNegocio(id) {
   document.getElementById('bairro').value = n.bairro || '';
   document.getElementById('cidade').value = n.cidade || '';
   document.getElementById('estado').value = n.estado || '';
-  gerarLinksNegocio(id);
+  if (id) {
+    gerarLinksNegocio(id);
+    document.getElementById('linksNegocio').style.display = 'block';
+  }
 }
 
 carregarNegocios();
