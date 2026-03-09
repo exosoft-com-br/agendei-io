@@ -137,6 +137,14 @@
         <button class="btn btn-secondary" onclick="showStep(1)">← Voltar</button>
       </div>
 
+      <!-- Step 2.5: Prestador (if multiple) -->
+      <div id="step2_5" class="step">
+          <label>Com qual profissional?</label>
+          <div id="prestadoresList"></div>
+          <div id="err2_5" class="error"></div>
+          <button class="btn btn-secondary" onclick="showStep(2)">← Voltar</button>
+      </div>
+
       <!-- Step 3: Data -->
       <div id="step3" class="step">
         <label>Para qual dia?</label>
@@ -227,31 +235,12 @@
       }
     }
 
-    async function carregarPersonalizacao() {
-      try {
-        const res = await fetch(`${API_URL}/api/personalizacao/nicho/${NICHO_ID}`);
-        if (res.ok) {
-          const p = await res.json();
-          aplicarPersonalizacao(p);
-          return p;
-        }
-      } catch (e) {
-        console.warn('Personalização não carregada, usando padrão:', e.message);
-      }
-      return null;
-    }
-
     // === INIT ===
     async function init() {
-      // Se tem ?negocio=, carrega dados específicos desse negócio
       if (NEGOCIO_ID) {
         await carregarNegocio();
       } else {
-        // Modo legado: carrega por nicho
-        await Promise.all([
-          carregarPersonalizacao(),
-          carregarConfig(),
-        ]);
+        document.getElementById('step0').innerHTML = '<div class="error">ID do Negócio não especificado na URL.</div>';
       }
     }
 
@@ -266,25 +255,18 @@
         }
         negocioData = await res.json();
 
-        // Aplicar personalização
         aplicarPersonalizacao(negocioData.personalizacao);
 
-        // Montar config compatível com o fluxo existente
         config = {
           nicho: negocioData.nicho,
           prestadores: negocioData.prestadores,
           servicos: negocioData.servicos,
         };
 
-        // Título
         const titulo = negocioData.negocio.nomeFantasia || negocioData.nicho.nomePublico;
         document.title = `${titulo} - Agendamento Online`;
         document.getElementById('headerTitle').textContent = `📅 ${titulo}`;
         document.getElementById('headerSubtitle').textContent = negocioData.nicho.saudacaoInicial || 'Agende seu horário online';
-
-        if (config.prestadores.length === 1) {
-          selectedPrestador = config.prestadores[0];
-        }
 
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
@@ -294,37 +276,6 @@
         showStep(1);
       } catch (e) {
         document.getElementById('step0').innerHTML = `<div class="error">Erro de conexão: ${e.message}</div>`;
-      }
-    }
-
-    async function carregarConfig() {
-      try {
-        const res = await fetch(`${API_URL}/api/nicho?nichoId=${NICHO_ID}`);
-        config = await res.json();
-
-        if (config.nicho) {
-          document.getElementById('headerTitle').textContent = `📅 ${config.nicho.nomePublico}`;
-          document.getElementById('headerSubtitle').textContent = 'Agende seu horário online';
-
-          if (config.prestadores.length === 1) {
-            selectedPrestador = config.prestadores[0];
-          }
-
-          const tomorrow = new Date();
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          document.getElementById('dataConsulta').min = tomorrow.toISOString().split('T')[0];
-          document.getElementById('dataConsulta').value = tomorrow.toISOString().split('T')[0];
-
-          showStep(1);
-        } else {
-          document.getElementById('step0').innerHTML = '<div class="error">Erro ao carregar configuração.</div>';
-        }
-      } catch (e) {
-        document.getElementById('step0').innerHTML =
-          `<div class="error">Erro de conexão com a API.<br><small>${e.message}</small></div>
-           <br><label>URL da API:</label>
-           <input type="text" id="apiUrlInput" value="${API_URL}" placeholder="http://localhost:3000">
-           <button class="btn btn-primary" onclick="localStorage.setItem('apiUrl', document.getElementById('apiUrlInput').value); location.reload();">Salvar e Reconectar</button>`;
       }
     }
 
@@ -338,10 +289,9 @@
       const nome = document.getElementById('clienteNome').value.trim();
       const tel = document.getElementById('clienteTelefone').value.trim();
       if (nome.length < 3) { document.getElementById('err1').textContent = 'Nome deve ter pelo menos 3 caracteres.'; return; }
-      if (!/^\d{12,13}$/.test(tel)) { document.getElementById('err1').textContent = 'Telefone inválido. Use formato: 5511999999999'; return; }
+      if (!/^\d{10,13}$/.test(tel)) { document.getElementById('err1').textContent = 'Telefone inválido (ex: 5511999999999).'; return; }
       document.getElementById('err1').textContent = '';
 
-      // Renderizar serviços
       const list = document.getElementById('servicosList');
       list.innerHTML = '';
       config.servicos.forEach(s => {
@@ -355,14 +305,33 @@
           <div class="price">${s.preco ? `R$ ${s.preco}` : ''}</div>
         `;
         card.onclick = () => {
-          document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
-          card.classList.add('selected');
-          selectedServico = s;
-          // Se tem mais de 1 prestador, mostrar seleção
-          if (config.prestadores.length > 1) {
-            // TODO: step de escolha de prestador
-          }
-          showStep(3);
+            document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            selectedServico = s;
+
+            if (!config.prestadores || config.prestadores.length === 0) {
+                document.getElementById('err2').textContent = 'Nenhum profissional disponível para este serviço.';
+                return;
+            }
+
+            if (config.prestadores.length > 1) {
+                const prestadoresList = document.getElementById('prestadoresList');
+                prestadoresList.innerHTML = '';
+                config.prestadores.forEach(p => {
+                    const pCard = document.createElement('div');
+                    pCard.className = 'service-card prestador-card';
+                    pCard.innerHTML = `<div><div class="name">${p.nome}</div><div class="meta">${p.categoria || ''}</div></div>`;
+                    pCard.onclick = () => {
+                        selectedPrestador = p;
+                        showStep(3);
+                    };
+                    prestadoresList.appendChild(pCard);
+                });
+                showStep('2_5');
+            } else {
+                selectedPrestador = config.prestadores[0];
+                showStep(3);
+            }
         };
         list.appendChild(card);
       });
@@ -382,6 +351,11 @@
       selectedSlot = null;
       document.getElementById('btnConfirmar').disabled = true;
 
+      if (!selectedPrestador) {
+        grid.innerHTML = `<div class="error" style="grid-column:1/-1">Erro: Nenhum profissional selecionado.</div>`;
+        return;
+      }
+
       try {
         const res = await fetch(
           `${API_URL}/api/availability?prestadorId=${selectedPrestador.id}&servicoId=${selectedServico.id}&data=${data}`
@@ -389,8 +363,8 @@
         const json = await res.json();
 
         grid.innerHTML = '';
-        if (!json.slots || json.slots.length === 0) {
-          grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#999;">Nenhum horário disponível nesta data.</div>';
+        if (json.erro || !json.slots || json.slots.length === 0) {
+          grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#999;">${json.erro || 'Nenhum horário disponível nesta data.'}</div>`;
           return;
         }
 
@@ -406,6 +380,8 @@
               selectedSlot = slot.inicio;
               document.getElementById('btnConfirmar').disabled = false;
             };
+          } else {
+              btn.disabled = true;
           }
           grid.appendChild(btn);
         });
@@ -414,11 +390,8 @@
       }
     }
 
-    // Confirmar
-    // Obter nichoId correto (modo negócio ou legado)
     function getNichoId() {
-      if (negocioData && negocioData.nicho) return negocioData.nicho.id;
-      return NICHO_ID;
+      return (negocioData && negocioData.nicho) ? negocioData.nicho.id : NICHO_ID;
     }
 
     async function confirmarAgendamento() {
@@ -458,7 +431,6 @@
       }
     }
 
-    // Cancelar
     async function cancelarAgendamento() {
       const proto = document.getElementById('cancelProtocolo').value.trim();
       const tel = document.getElementById('cancelTelefone').value.trim();
