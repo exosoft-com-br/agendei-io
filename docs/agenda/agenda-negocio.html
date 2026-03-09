@@ -84,10 +84,12 @@
     <div class="body">
         <div id="filter-section">
             <div class="form-row">
-                <div class="form-group"><label>Prestador</label><select id="prestadorId"></select></div>
-                <div class="form-group"><label>Data</label><input type="date" id="data"></div>
-                <div class="form-group"><label>Cliente (nome)</label><input type="text" id="clienteNome" placeholder="Buscar por nome"></div>
-                <div class="form-group"><label>Telefone</label><input type="text" id="clienteTelefone" placeholder="Buscar por telefone"></div>
+              <div class="form-group"><label>Prestador</label><select id="prestadorId"></select></div>
+              <div class="form-group"><label>Data</label><input type="date" id="data"></div>
+              <div class="form-group"><label>Semana (início)</label><input type="date" id="dataInicio"></div>
+              <div class="form-group"><label>Semana (fim)</label><input type="date" id="dataFim"></div>
+              <div class="form-group"><label>Cliente (nome)</label><input type="text" id="clienteNome" placeholder="Buscar por nome"></div>
+              <div class="form-group"><label>Telefone</label><input type="text" id="clienteTelefone" placeholder="Buscar por telefone"></div>
             </div>
         </div>
         <div class="table-scroll">
@@ -199,8 +201,14 @@
       let url = `/booking?`;
       if (NICHO_ID) url += `nichoId=${encodeURIComponent(NICHO_ID)}&`;
       if (prestadorId) url += `prestadorId=${encodeURIComponent(prestadorId)}&`;
-      if (prestadorId) url += `prestadorId=${encodeURIComponent(prestadorId)}&`;
-      if (data) url += `data=${encodeURIComponent(data)}&`;
+      // Filtro por semana
+      const dataInicio = document.getElementById('dataInicio').value;
+      const dataFim = document.getElementById('dataFim').value;
+      if (dataInicio && dataFim) {
+        url += `dataInicio=${encodeURIComponent(dataInicio)}&dataFim=${encodeURIComponent(dataFim)}&`;
+      } else if (data) {
+        url += `data=${encodeURIComponent(data)}&`;
+      }
       if (clienteNome) url += `clienteNome=${encodeURIComponent(clienteNome)}&`;
       if (clienteTelefone) url += `clienteTelefone=${encodeURIComponent(clienteTelefone)}&`;
       
@@ -246,6 +254,8 @@
 
     document.getElementById('prestadorId').onchange = carregarAgenda;
     document.getElementById('data').onchange = carregarAgenda;
+    document.getElementById('dataInicio').onchange = carregarAgenda;
+    document.getElementById('dataFim').onchange = carregarAgenda;
     document.getElementById('clienteNome').oninput = carregarAgenda;
     document.getElementById('clienteTelefone').oninput = carregarAgenda;
 
