@@ -105,6 +105,7 @@
     // === CONFIGURAÇÃO ===
     const API_URL = 'https://plataforma-agendamentos-api.onrender.com';
     const NEGOCIO_ID = new URLSearchParams(window.location.search).get('negocioId');
+    let servicosCache = [];
 
     // === HELPERS ===
     function getQueryParam(name) {
@@ -167,6 +168,8 @@
             document.getElementById('headerTitle').textContent = `📅 Agenda`;
             document.getElementById('headerSubtitle').textContent = titulo;
 
+            servicosCache = negocioData.servicos || [];
+
             // Set default date and load agenda
             const today = new Date();
             document.getElementById('data').value = today.toISOString().split('T')[0];
@@ -201,12 +204,10 @@
           return;
         }
 
-        const servicoIds = [...new Set(agendamentos.map(ag => ag.servico_id).filter(Boolean))];
-        let servicosMap = {};
-        if (servicoIds.length) {
-            const servicosResp = await apiFetch(`/servicos?ids=${servicoIds.join(',')}`);
-            (servicosResp.servicos||[]).forEach(s => { servicosMap[s.id] = s.nome; });
-        }
+        const servicosMap = servicosCache.reduce((map, s) => {
+            map[s.id] = s.nome;
+            return map;
+        }, {});
 
         agendamentos.forEach(ag => {
           const hora = ag.data_hora?.split('T')[1]?.substring(0,5) || ag.data_hora;

@@ -553,11 +553,11 @@ negocioRouter.get("/negocio/:negocioId/publico", async (req: Request, res: Respo
 
     const nichoId = negocio.nicho_id;
 
-    // Buscar prestadores do nicho
+    // Buscar prestadores do negócio
     const { data: prestadoresRaw } = await supabase
       .from("prestadores")
       .select("*")
-      .eq("nicho_id", nichoId)
+      .eq("negocio_id", negocioId)
       .eq("ativo", true);
 
     // Buscar serviços vinculados ao negócio (por negocio_id OU nicho_id)
