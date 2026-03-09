@@ -147,9 +147,10 @@ servicoRouter.put("/prestadores/:prestadorId", async (req: Request, res: Respons
     if (req.body.horarioFim !== undefined) updates.horario_fim = req.body.horarioFim.trim();
     if (req.body.diasSemana !== undefined) updates.dias_semana = req.body.diasSemana;
     if (req.body.whatsappNumero !== undefined) {
-      updates.whatsapp_numero = req.body.whatsappNumero.replace(/\D/g, "") || null;
+      updates.whatsapp_numero = (req.body.whatsappNumero || "").replace(/\D/g, "") || null;
     }
     if (req.body.ativo !== undefined) updates.ativo = Boolean(req.body.ativo);
+    if (req.body.negocioId) updates.negocio_id = sanitizarId(req.body.negocioId);
 
     if (Object.keys(updates).length === 0) {
       res.status(400).json({ erro: "Nenhum campo para atualizar." });

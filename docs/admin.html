@@ -1008,12 +1008,22 @@
     }
 
     // ========================================================================
-    // ALERTS
+    // ALERTS & UTILS
     // ========================================================================
     function showAlert(type, msg) {
       const el = document.getElementById(type === 'success' ? 'alertSuccess' : 'alertError');
       el.textContent = msg; el.style.display = 'block';
       setTimeout(() => { el.style.display = 'none'; }, 5000);
+    }
+
+    function slugify(text) {
+        if (!text) return '';
+        return text.toString().toLowerCase()
+            .replace(/\s+/g, '-')           // Replace spaces with -
+            .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+            .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+            .replace(/^-+/, '')             // Trim - from start of text
+            .replace(/-+$/, '');            // Trim - from end of text
     }
 
     // ========================================================================
@@ -1024,10 +1034,12 @@
       document.getElementById(`sec-${name}`).classList.add('active');
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       if (btn) btn.classList.add('active');
+      
+      // Populando selects com base na aba clicada
       if (name === 'personalizacao') populateNegocioSelect('pNegocioId');
-      if (name === 'servicos') populateNichoSelect('sNichoId');
+      if (name === 'servicos') populateNegocioSelect('sNegocioId', carregarPrestadoresServicos);
       if (name === 'agendamentos') { populateNichoSelect('aNichoId'); setDefaultDate(); }
-      if (name === 'integracoes') populateNegocioSelect('iNegocioId');
+      if (name === 'integracoes') populateNegocioSelect('iNegocioId', carregarIntegracoes);
       if (name === 'usuarios' && isAdmin()) carregarUsuarios();
     }
 
@@ -1062,9 +1074,7 @@
     // ========================================================================
     async function carregarNegocios() {
       const ownerId = CURRENT_USER?.ownerId || CURRENT_USER?.id;
-      console.log('[ADMIN] carregarNegocios() ownerId:', ownerId);
       if (!ownerId) {
-        console.warn('[ADMIN] ownerId não encontrado, pulando carregamento');
         negociosCache = [];
         renderNegocios();
         return;
@@ -1074,7 +1084,6 @@
         negociosCache = data.negocios || [];
         renderNegocios();
       } catch (e) {
-        console.error('[ADMIN] Erro ao carregar negócios:', e);
         showAlert('error', 'Erro ao carregar negócios: ' + e.message);
         negociosCache = [];
         renderNegocios();
@@ -1284,13 +1293,18 @@
     // ========================================================================
     // PERSONALIZAÇÃO
     // ========================================================================
-    function populateNegocioSelect(selectId) {
+    function populateNegocioSelect(selectId, callback) {
       const sel = document.getElementById(selectId);
       sel.innerHTML = negociosCache.length
-        ? negociosCache.map(n => `<option value="${n.id}">${n.nomeFantasia} (${n.nichoId})</option>`).join('')
-        : '<option value="">Nenhum negócio</option>';
-      if (selectId === 'pNegocioId' && negociosCache.length) carregarPersonalizacao();
-      if (selectId === 'iNegocioId' && negociosCache.length) carregarIntegracoes();
+        ? '<option value="">Selecione um negócio...</option>' + negociosCache.map(n => `<option value="${n.id}">${n.nomeFantasia} (${n.nichoId})</option>`).join('')
+        : '<option value="">Nenhum negócio cadastrado</option>';
+      
+      if (callback && negociosCache.length > 0) {
+        // Se há um callback, chama ele para carregar dados da primeira opção
+        callback();
+      } else if (selectId === 'pNegocioId' && negociosCache.length) {
+        carregarPersonalizacao();
+      }
     }
 
     function syncColor(textId, value) { document.getElementById(textId).value = value; atualizarPreview(); }
@@ -1368,8 +1382,20 @@
     }
 
     async function carregarPrestadoresServicos() {
-      const nichoId = document.getElementById('sNichoId').value;
-      if (!nichoId) return;
+      const negocioId = document.getElementById('sNegocioId').value;
+      const negocio = negociosCache.find(n => n.id === negocioId);
+      const nichoId = negocio ? negocio.nichoId : null;
+
+      if (!nichoId) {
+        document.getElementById('prestadoresList').innerHTML = '<div class="empty"><div class="empty-icon">👤</div><p>Selecione um negócio para ver os prestadores.</p></div>';
+        document.getElementById('servicosList').innerHTML = '<div class="empty"><div class="empty-icon">📋</div><p>Selecione um negócio para ver os serviços.</p></div>';
+        prestadoresCache = [];
+        servicosCache = [];
+        renderPrestadores();
+        renderServicos();
+        return;
+      }
+      
       try {
         const [pData, sData] = await Promise.all([
           apiFetch(`/prestadores?nichoId=${nichoId}`),
@@ -1442,14 +1468,16 @@
 
     async function salvarPrestador(idx) {
       const p = prestadoresCache[idx];
+      const negocioId = document.getElementById('sNegocioId').value;
       try {
         const dias = [...document.querySelectorAll(`.ep${idx}-dia:checked`)].map(c => parseInt(c.value));
         const body = {
+          negocioId: negocioId,
           nome: document.getElementById(`ep${idx}Nome`).value.trim(),
           categoria: document.getElementById(`ep${idx}Cat`).value.trim(),
           horarioInicio: document.getElementById(`ep${idx}HI`).value,
           horarioFim: document.getElementById(`ep${idx}HF`).value,
-          whatsappNumero: document.getElementById(`ep${idx}Wpp`).value.trim(),
+          whatsappNumero: (document.getElementById(`ep${idx}Wpp`)?.value || "").trim(),
           diasSemana: dias,
         };
         const data = await apiFetch(`/prestadores/${p.id}`, { method: 'PUT', body: JSON.stringify(body) });
@@ -1475,12 +1503,16 @@
     }
 
     async function criarPrestador() {
-      const nichoId = document.getElementById('sNichoId').value;
-      if (!nichoId) { showAlert('error', 'Selecione um nicho primeiro.'); return; }
+      const negocioId = document.getElementById('sNegocioId').value;
+      const negocio = negociosCache.find(n => n.id === negocioId);
+      const nichoId = negocio ? negocio.nichoId : null;
+
+      if (!nichoId || !negocioId) { showAlert('error', 'Selecione um negócio primeiro.'); return; }
       try {
         const dias = [...document.querySelectorAll('.sp-dia:checked')].map(c => parseInt(c.value));
         const body = {
           nichoId,
+          negocioId,
           id: document.getElementById('spId').value.trim(),
           nome: document.getElementById('spNome').value.trim(),
           categoria: document.getElementById('spCategoria').value.trim(),
@@ -1584,8 +1616,11 @@
     }
 
     async function criarServico() {
-      const nichoId = document.getElementById('sNichoId').value;
-      if (!nichoId) { showAlert('error', 'Selecione um nicho primeiro.'); return; }
+      const negocioId = document.getElementById('sNegocioId').value;
+      const negocio = negociosCache.find(n => n.id === negocioId);
+      const nichoId = negocio ? negocio.nichoId : null;
+
+      if (!nichoId) { showAlert('error', 'Selecione um negócio primeiro.'); return; }
       try {
         const body = {
           nichoId,
