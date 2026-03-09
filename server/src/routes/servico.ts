@@ -59,6 +59,7 @@ servicoRouter.get("/prestadores", async (req: Request, res: Response) => {
 servicoRouter.post("/prestadores", async (req: Request, res: Response) => {
   try {
     const nichoId = sanitizarId(req.body.nichoId);
+    const negocioId = req.body.negocioId ? sanitizarId(req.body.negocioId) : null;
     const id = sanitizarId(req.body.id) || `prest-${Date.now()}`;
     const nome = sanitizar(req.body.nome || "");
     const categoria = sanitizar(req.body.categoria || "");
@@ -84,6 +85,7 @@ servicoRouter.post("/prestadores", async (req: Request, res: Response) => {
       .insert({
         id,
         nicho_id: nichoId,
+        negocio_id: negocioId,
         nome,
         categoria,
         horario_inicio: horarioInicio,
@@ -109,6 +111,7 @@ servicoRouter.post("/prestadores", async (req: Request, res: Response) => {
       prestador: {
         id: data.id,
         nichoId: data.nicho_id,
+        negocioId: data.negocio_id,
         nome: data.nome,
         categoria: data.categoria,
         horarioInicio: data.horario_inicio,
