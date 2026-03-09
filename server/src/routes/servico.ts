@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { supabase } from "../supabaseClient";
 import { sanitizar, sanitizarId } from "../utils/sanitizar";
+import { v4 as uuidv4 } from "uuid";
 
 export const servicoRouter = Router();
 
@@ -65,13 +66,28 @@ servicoRouter.post("/prestadores", async (req: Request, res: Response) => {
   try {
     const nichoId = sanitizarId(req.body.nichoId);
     const negocioId = req.body.negocioId ? sanitizarId(req.body.negocioId) : null;
-    const id = sanitizarId(req.body.id) || `prest-${Date.now()}`;
     const nome = sanitizar(req.body.nome || "");
     const categoria = sanitizar(req.body.categoria || "");
     const horarioInicio = (req.body.horarioInicio || "08:00").trim();
     const horarioFim = (req.body.horarioFim || "18:00").trim();
     const diasSemana = req.body.diasSemana || [1, 2, 3, 4, 5];
     const whatsappNumero = (req.body.whatsappNumero || "").replace(/\D/g, "") || null;
+
+    // Gerar id único
+    const id = req.body.id ? sanitizarId(req.body.id) : uuidv4();
+
+    // Função para gerar slug único
+    function gerarSlug(nome: string, sufixo: string) {
+      return (
+        nome
+          .toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '')
+        + '-' + sufixo
+      );
+    }
+    const slug = gerarSlug(nome, id.substring(0, 8));
 
     if (!nichoId || !nome) {
       res.status(400).json({ erro: "Campos obrigatórios: nichoId, nome" });
@@ -89,6 +105,7 @@ servicoRouter.post("/prestadores", async (req: Request, res: Response) => {
       .from("prestadores")
       .insert({
         id,
+        slug,
         nicho_id: nichoId,
         negocio_id: negocioId,
         nome,
@@ -124,6 +141,7 @@ servicoRouter.post("/prestadores", async (req: Request, res: Response) => {
         diasSemana: data.dias_semana,
         whatsappNumero: data.whatsapp_numero,
         ativo: data.ativo,
+        slug: data.slug,
       },
     });
   } catch (erro) {
