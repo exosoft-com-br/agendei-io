@@ -91,7 +91,7 @@
         </div>
         <div class="table-scroll">
             <table id="agendaTable" style="display:none">
-            <thead><tr><th>Hora</th><th>Cliente</th><th>Telefone</th><th>Serviço</th><th>Status</th><th>Protocolo</th></tr></thead>
+            <thead><tr><th>Hora</th><th>Cliente</th><th>Telefone</th><th>Serviço</th><th>Prestador</th><th>Status</th><th>Protocolo</th></tr></thead>
             <tbody id="agendaBody"></tbody>
             </table>
         </div>
@@ -213,7 +213,8 @@
           const hora = ag.data_hora?.split('T')[1]?.substring(0,5) || ag.data_hora;
           const clienteTelefone = ag.cliente_telefone || ag.telefone || '—';
           const servicoNome = servicosMap[ag.servico_id] || ag.servico_id || '—';
-          tbody.innerHTML += `<tr><td><strong>${hora}</strong></td><td>${ag.cliente_nome||'—'}</td><td>${clienteTelefone}</td><td>${servicoNome}</td><td><span class="badge badge-active">${ag.status||'—'}</span></td><td style="font-size:.8rem">${ag.protocolo||'—'}</td></tr>`;
+          const prestadorNome = ag.prestadorNome || '—';
+          tbody.innerHTML += `<tr><td><strong>${hora}</strong></td><td>${ag.cliente_nome||'—'}</td><td>${clienteTelefone}</td><td>${servicoNome}</td><td>${prestadorNome}</td><td><span class="badge badge-active">${ag.status||'—'}</span></td><td style="font-size:.8rem">${ag.protocolo||'—'}</td></tr>`;
         });
         
         document.getElementById('agendaTable').style.display = 'table';

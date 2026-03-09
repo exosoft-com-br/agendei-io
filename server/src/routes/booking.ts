@@ -261,78 +261,68 @@ bookingRouter.get("/booking", async (req: Request, res: Response) => {
     let agendamentos = [];
     let error = null;
 
-    // Se negocioId for informado, buscar todos os prestadores do negócio
+    let query;
+
     if (negocioId) {
-      // Buscar IDs dos prestadores vinculados ao negócio
       const { data: prestadores, error: errPrest } = await supabase
         .from("prestadores")
         .select("id")
         .eq("negocio_id", negocioId);
+
       if (errPrest) {
-        res.status(500).json({ erro: "Erro ao buscar prestadores do negócio." });
-        return;
+        return res.status(500).json({ erro: "Erro ao buscar prestadores do negócio." });
       }
       const prestadorIds = (prestadores || []).map((p: any) => p.id);
       if (!prestadorIds.length) {
-        res.json({ agendamentos: [] });
-        return;
+        return res.json({ agendamentos: [] });
       }
-      let query = supabase.from("agendamentos").select("*", { count: "exact", head: false });
-      if (data) {
-        const start = new Date(data as string);
-        const end = new Date(start);
-        end.setDate(start.getDate() + 1);
-        query = query.gte("data_hora", start.toISOString()).lt("data_hora", end.toISOString());
-      }
-      if (clienteNome) {
-        query = query.ilike("cliente_nome", `%${clienteNome}%`);
-      }
-      if (clienteTelefone) {
-        const tel = (clienteTelefone as string).replace(/\D/g, "");
-        query = query.ilike("cliente_telefone", `%${tel}%`);
-      }
-      if (nichoId) {
-        query = query.eq("nicho_id", nichoId);
-      }
-      // Filtra por todos os prestadores do negócio
+
+      query = supabase.from("agendamentos").select("*, prestadores(nome)");
       query = query.in("prestador_id", prestadorIds);
-      query = query.order("data_hora", { ascending: true });
-      const result = await query;
-      agendamentos = result.data || [];
-      error = result.error;
     } else {
-      // Filtro padrão (sem negocioId)
-      let query = supabase.from("agendamentos").select("*", { count: "exact", head: false });
-      if (data) {
-        const start = new Date(data as string);
-        const end = new Date(start);
-        end.setDate(start.getDate() + 1);
-        query = query.gte("data_hora", start.toISOString()).lt("data_hora", end.toISOString());
-      }
-      if (clienteNome) {
-        query = query.ilike("cliente_nome", `%${clienteNome}%`);
-      }
-      if (clienteTelefone) {
-        const tel = (clienteTelefone as string).replace(/\D/g, "");
-        query = query.ilike("cliente_telefone", `%${tel}%`);
-      }
+      query = supabase.from("agendamentos").select("*, prestadores(nome)");
       if (nichoId) {
         query = query.eq("nicho_id", nichoId);
       }
       if (prestadorId) {
         query = query.eq("prestador_id", prestadorId);
       }
-      query = query.order("data_hora", { ascending: true });
-      const result = await query;
-      agendamentos = result.data || [];
-      error = result.error;
     }
+
+    if (data) {
+      const start = new Date(data as string);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 1);
+      query = query.gte("data_hora", start.toISOString()).lt("data_hora", end.toISOString());
+    }
+    if (clienteNome) {
+      query = query.ilike("cliente_nome", `%${clienteNome}%`);
+    }
+    if (clienteTelefone) {
+      const tel = (clienteTelefone as string).replace(/\D/g, "");
+      query = query.ilike("cliente_telefone", `%${tel}%`);
+    }
+
+    query = query.order("data_hora", { ascending: true });
+
+    const result = await query;
+    agendamentos = result.data || [];
+    error = result.error;
+
     if (error) {
-      res.status(500).json({ erro: "Erro ao buscar agendamentos." });
-      return;
+      console.error("Erro ao buscar agendamentos:", error);
+      return res.status(500).json({ erro: "Erro ao buscar agendamentos." });
     }
-    res.json({ agendamentos });
+
+    const mappedAgendamentos = (agendamentos || []).map((ag: any) => ({
+      ...ag,
+      prestadores: undefined, // remover o objeto aninhado
+      prestadorNome: ag.prestadores?.nome || null,
+    }));
+
+    res.json({ agendamentos: mappedAgendamentos });
   } catch (erro) {
+    console.error("Erro interno ao buscar agendamentos:", erro);
     res.status(500).json({ erro: "Erro interno ao buscar agendamentos." });
   }
 });
