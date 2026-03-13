@@ -23,11 +23,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ============================================================
-// SEGURANÇA: Helmet — headers HTTP de proteção
-// ============================================================
-app.use(helmet());
-
-// ============================================================
 // SEGURANÇA: CORS — restringir origens permitidas
 // ============================================================
 const allowedOrigins = [
@@ -52,6 +47,13 @@ app.use(
     maxAge: 86400, // Cache preflight por 24h
   })
 );
+
+// ============================================================
+// SEGURANÇA: Helmet — headers HTTP de proteção
+// ============================================================
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 
 // ============================================================
 // SEGURANÇA: Rate Limiting — proteção contra abuso/DDoS
