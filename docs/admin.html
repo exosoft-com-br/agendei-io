@@ -6,7 +6,31 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
+  <!-- Supabase Client CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/supabase.min.js"></script>
   <title>Admin — Plataforma de Agendamentos</title>
+  <script>
+    // Configuração Supabase
+    const SUPABASE_URL = 'https://<SUA_INSTANCIA>.supabase.co'; // Substitua pela sua URL
+    const SUPABASE_KEY = '<SUA_CHAVE_ANON>'; // Substitua pela sua chave anon
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Exemplo: buscar negócios
+    async function buscarNegocios() {
+      const { data, error } = await supabase.from('negocios').select('*');
+      if (error) {
+        console.error('Erro Supabase:', error.message);
+        return [];
+      }
+      console.log('Negócios:', data);
+      return data;
+    }
+
+    // Chame buscarNegocios() quando quiser carregar os dados
+    window.addEventListener('DOMContentLoaded', () => {
+      buscarNegocios();
+    });
+  </script>
   <style>
     :root {
       --primary: #667eea; --primary-dark: #5a6fd6; --secondary: #764ba2;
