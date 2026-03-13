@@ -26,6 +26,34 @@
       return data;
     }
 
+    // Login com Supabase
+    async function login(email, senha) {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: senha
+      });
+      if (error) {
+        alert('Erro ao logar: ' + error.message);
+        return null;
+      }
+      alert('Login realizado com sucesso!');
+      return data;
+    }
+
+    // Cadastro com Supabase
+    async function cadastro(email, senha) {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: senha
+      });
+      if (error) {
+        alert('Erro ao cadastrar: ' + error.message);
+        return null;
+      }
+      alert('Cadastro realizado com sucesso!');
+      return data;
+    }
+
     // Chame buscarNegocios() quando quiser carregar os dados
     window.addEventListener('DOMContentLoaded', () => {
       buscarNegocios();
