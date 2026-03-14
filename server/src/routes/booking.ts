@@ -252,27 +252,55 @@ bookingRouter.post("/booking/cancel", async (req: Request, res: Response) => {
 
 /**
  * GET /api/booking
- * Lista agendamentos filtrando por data, nome ou telefone do cliente.
- * Query params: data (YYYY-MM-DD), clienteNome, clienteTelefone
+ * Lista agendamentos com filtros combinados.
+ * Query params: negocioId, nichoId, prestadorId,
+ *               data (YYYY-MM-DD), dataInicio + dataFim (range),
+ *               clienteNome, clienteTelefone
  */
 bookingRouter.get("/booking", async (req: Request, res: Response) => {
   try {
-    const { data, clienteNome, clienteTelefone, nichoId, prestadorId, negocioId } = req.query;
-    let agendamentos = [];
-    let error = null;
+    const {
+      data,
+      dataInicio,
+      dataFim,
+      clienteNome,
+      clienteTelefone,
+      nichoId,
+      prestadorId,
+      negocioId,
+    } = req.query;
 
     let query;
 
     if (negocioId) {
-      const { data: prestadores, error: errPrest } = await supabase
+      // Tenta buscar prestadores pelo negocio_id (coluna nova).
+      // Se não houver resultado, faz fallback pelo nicho_id do negócio.
+      let prestadorIds: string[] = [];
+
+      const { data: prestByNegocio } = await supabase
         .from("prestadores")
         .select("id")
         .eq("negocio_id", negocioId);
 
-      if (errPrest) {
-        return res.status(500).json({ erro: "Erro ao buscar prestadores do negócio." });
+      if (prestByNegocio && prestByNegocio.length > 0) {
+        prestadorIds = prestByNegocio.map((p: any) => p.id);
+      } else {
+        // Fallback: busca nicho_id do negócio e filtra prestadores por nicho
+        const { data: negocio } = await supabase
+          .from("negocios")
+          .select("nicho_id")
+          .eq("id", negocioId)
+          .single();
+
+        if (negocio?.nicho_id) {
+          const { data: prestByNicho } = await supabase
+            .from("prestadores")
+            .select("id")
+            .eq("nicho_id", negocio.nicho_id);
+          prestadorIds = (prestByNicho || []).map((p: any) => p.id);
+        }
       }
-      const prestadorIds = (prestadores || []).map((p: any) => p.id);
+
       if (!prestadorIds.length) {
         return res.json({ agendamentos: [] });
       }
@@ -285,17 +313,29 @@ bookingRouter.get("/booking", async (req: Request, res: Response) => {
         query = query.eq("nicho_id", nichoId);
       }
     }
-    
+
+    // Filtro por prestador específico (dentro do conjunto do negócio)
     if (prestadorId) {
       query = query.eq("prestador_id", prestadorId);
     }
 
-    if (data) {
+    // Filtro de data: intervalo tem prioridade sobre data única
+    if (dataInicio && dataFim) {
+      const start = new Date(dataInicio as string);
+      const end = new Date(dataFim as string);
+      end.setDate(end.getDate() + 1); // inclui o último dia do intervalo
+      query = query
+        .gte("data_hora", start.toISOString())
+        .lt("data_hora", end.toISOString());
+    } else if (data) {
       const start = new Date(data as string);
       const end = new Date(start);
       end.setDate(start.getDate() + 1);
-      query = query.gte("data_hora", start.toISOString()).lt("data_hora", end.toISOString());
+      query = query
+        .gte("data_hora", start.toISOString())
+        .lt("data_hora", end.toISOString());
     }
+
     if (clienteNome) {
       query = query.ilike("cliente_nome", `%${clienteNome}%`);
     }
@@ -307,17 +347,17 @@ bookingRouter.get("/booking", async (req: Request, res: Response) => {
     query = query.order("data_hora", { ascending: true });
 
     const result = await query;
-    agendamentos = result.data || [];
-    error = result.error;
+    const agendamentos = result.data || [];
+    const error = result.error;
 
     if (error) {
       console.error("Erro ao buscar agendamentos:", error);
       return res.status(500).json({ erro: "Erro ao buscar agendamentos." });
     }
 
-    const mappedAgendamentos = (agendamentos || []).map((ag: any) => ({
+    const mappedAgendamentos = agendamentos.map((ag: any) => ({
       ...ag,
-      prestadores: undefined, // remover o objeto aninhado
+      prestadores: undefined,
       prestadorNome: ag.prestadores?.nome || null,
     }));
 

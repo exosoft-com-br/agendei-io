@@ -110,6 +110,22 @@
       border-color: var(--cor-primaria);
       box-shadow: 0 0 0 3px rgba(0,168,198,.12);
     }
+    /* ===== ATALHOS DE PERÍODO ===== */
+    .period-shortcuts {
+      display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px;
+    }
+    .btn-period {
+      padding: 7px 14px; border: 2px solid #dde4e8; border-radius: 20px;
+      font-size: .8rem; font-weight: 700; cursor: pointer;
+      font-family: var(--fonte-corpo); background: #fff;
+      color: #667C85; transition: all .18s; white-space: nowrap;
+    }
+    .btn-period:hover { border-color: var(--cor-primaria); color: var(--cor-primaria); }
+    .btn-period.active {
+      background: var(--cor-primaria); border-color: var(--cor-primaria);
+      color: #fff; box-shadow: 0 2px 8px rgba(0,168,198,.3);
+    }
+
     .filter-actions {
       display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;
     }
@@ -118,10 +134,6 @@
       font-size: .82rem; font-weight: 700; cursor: pointer;
       font-family: var(--fonte-corpo); transition: all .18s;
     }
-    .btn-hoje {
-      background: var(--cor-primaria); color: #fff;
-    }
-    .btn-hoje:hover { background: var(--cor-secundaria); }
     .btn-limpar {
       background: #f0f4f6; color: #667C85; border: 1px solid #dde4e8;
     }
@@ -268,6 +280,17 @@
     <!-- Filtros -->
     <div class="filter-card">
       <h3>🔍 Filtros</h3>
+
+      <!-- Atalhos de período -->
+      <div class="period-shortcuts">
+        <button class="btn-period" id="btn-hoje" onclick="filtrarPeriodo('hoje')">📅 Hoje</button>
+        <button class="btn-period" id="btn-amanha" onclick="filtrarPeriodo('amanha')">➡ Amanhã</button>
+        <button class="btn-period" id="btn-semana" onclick="filtrarPeriodo('semana')">📆 Esta semana</button>
+        <button class="btn-period" id="btn-proxsemana" onclick="filtrarPeriodo('proxsemana')">⏭ Próx. semana</button>
+        <button class="btn-period" id="btn-mes" onclick="filtrarPeriodo('mes')">🗓 Este mês</button>
+        <button class="btn-period" id="btn-todos" onclick="filtrarPeriodo('todos')">♾ Todos</button>
+      </div>
+
       <div class="filter-grid">
         <div class="form-group">
           <label>Prestador</label>
@@ -276,15 +299,15 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Data</label>
-          <input type="date" id="data">
+          <label>Data específica</label>
+          <input type="date" id="data" placeholder="dd/mm/aaaa">
         </div>
         <div class="form-group">
-          <label>Semana — início</label>
+          <label>Período — início</label>
           <input type="date" id="dataInicio">
         </div>
         <div class="form-group">
-          <label>Semana — fim</label>
+          <label>Período — fim</label>
           <input type="date" id="dataFim">
         </div>
         <div class="form-group">
@@ -297,8 +320,7 @@
         </div>
       </div>
       <div class="filter-actions">
-        <button class="btn-filter btn-hoje" onclick="filtrarHoje()">📅 Hoje</button>
-        <button class="btn-filter btn-limpar" onclick="limparFiltros()">✕ Limpar</button>
+        <button class="btn-filter btn-limpar" onclick="limparFiltros()">✕ Limpar filtros</button>
         <button class="btn-filter btn-atualizar" onclick="carregarAgenda()">↻ Atualizar</button>
       </div>
     </div>
@@ -391,12 +413,71 @@
       }
     }
 
-    // === FILTROS ===
-    function filtrarHoje() {
-      const hoje = new Date().toISOString().split('T')[0];
-      document.getElementById('data').value = hoje;
+    // === FILTROS DE PERÍODO ===
+    function toISO(d) { return d.toISOString().split('T')[0]; }
+
+    function filtrarPeriodo(periodo) {
+      // Limpa todos os botões ativos
+      document.querySelectorAll('.btn-period').forEach(b => b.classList.remove('active'));
+      const btn = document.getElementById(`btn-${periodo}`);
+      if (btn) btn.classList.add('active');
+
+      const hoje = new Date();
+      hoje.setHours(0,0,0,0);
+
+      // Limpa campos de data
+      document.getElementById('data').value = '';
       document.getElementById('dataInicio').value = '';
       document.getElementById('dataFim').value = '';
+
+      switch (periodo) {
+        case 'hoje':
+          document.getElementById('data').value = toISO(hoje);
+          break;
+
+        case 'amanha': {
+          const amanha = new Date(hoje);
+          amanha.setDate(hoje.getDate() + 1);
+          document.getElementById('data').value = toISO(amanha);
+          break;
+        }
+
+        case 'semana': {
+          // Segunda a domingo da semana atual
+          const diaSemana = hoje.getDay(); // 0=dom, 1=seg...
+          const seg = new Date(hoje);
+          seg.setDate(hoje.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1));
+          const dom = new Date(seg);
+          dom.setDate(seg.getDate() + 6);
+          document.getElementById('dataInicio').value = toISO(seg);
+          document.getElementById('dataFim').value = toISO(dom);
+          break;
+        }
+
+        case 'proxsemana': {
+          const diaSemana = hoje.getDay();
+          const proxSeg = new Date(hoje);
+          proxSeg.setDate(hoje.getDate() + (diaSemana === 0 ? 1 : 8 - diaSemana));
+          const proxDom = new Date(proxSeg);
+          proxDom.setDate(proxSeg.getDate() + 6);
+          document.getElementById('dataInicio').value = toISO(proxSeg);
+          document.getElementById('dataFim').value = toISO(proxDom);
+          break;
+        }
+
+        case 'mes': {
+          const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+          const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+          document.getElementById('dataInicio').value = toISO(primeiroDia);
+          document.getElementById('dataFim').value = toISO(ultimoDia);
+          break;
+        }
+
+        case 'todos':
+          // Sem filtro de data
+          break;
+      }
+
       carregarAgenda();
     }
 
@@ -407,6 +488,7 @@
       document.getElementById('dataFim').value = '';
       document.getElementById('clienteNome').value = '';
       document.getElementById('clienteTelefone').value = '';
+      document.querySelectorAll('.btn-period').forEach(b => b.classList.remove('active'));
       carregarAgenda();
     }
 
@@ -461,11 +543,8 @@
           prestadorSelect.appendChild(opt);
         });
 
-        // Data padrão: hoje
-        const hoje = new Date().toISOString().split('T')[0];
-        document.getElementById('data').value = hoje;
-
-        carregarAgenda();
+        // Filtro padrão: hoje
+        filtrarPeriodo('hoje');
 
       } catch (e) {
         document.getElementById('agendaEmpty').innerHTML =
@@ -578,11 +657,17 @@
       }
     }
 
+    // Desativa atalho de período quando o usuário ajusta datas manualmente
+    function onDataManual() {
+      document.querySelectorAll('.btn-period').forEach(b => b.classList.remove('active'));
+      carregarAgenda();
+    }
+
     // Eventos dos filtros
     document.getElementById('prestadorId').onchange = carregarAgenda;
-    document.getElementById('data').onchange = carregarAgenda;
-    document.getElementById('dataInicio').onchange = carregarAgenda;
-    document.getElementById('dataFim').onchange = carregarAgenda;
+    document.getElementById('data').onchange = onDataManual;
+    document.getElementById('dataInicio').onchange = onDataManual;
+    document.getElementById('dataFim').onchange = onDataManual;
     document.getElementById('clienteNome').oninput = carregarAgenda;
     document.getElementById('clienteTelefone').oninput = carregarAgenda;
 
