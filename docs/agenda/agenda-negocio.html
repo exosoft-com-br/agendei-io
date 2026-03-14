@@ -375,6 +375,7 @@
   <script>
     const API_URL = 'https://plataforma-agendamentos-api.onrender.com';
     const NEGOCIO_ID = new URLSearchParams(window.location.search).get('negocioId');
+    let NICHO_ID = null; // preenchido após carregar negocio
     let servicosCache = [];
     let prestadoresCache = [];
 
@@ -533,6 +534,12 @@
         const negocioData = await apiFetch(`/negocio/${NEGOCIO_ID}/publico`);
         aplicarPersonalizacao(negocioData.personalizacao);
 
+        if (negocioData.negocio) {
+          NICHO_ID = negocioData.negocio.nichoId || null;
+        } else if (negocioData.nicho) {
+          NICHO_ID = negocioData.nicho.id || null;
+        }
+
         const titulo = negocioData.negocio?.nomeFantasia || 'Agenda';
         document.title = `Agenda — ${titulo} — agendei.io`;
         document.getElementById('headerTitle').textContent = titulo;
@@ -578,6 +585,7 @@
       document.getElementById('agendaCount').textContent = '...';
 
       let url = `/booking?negocioId=${encodeURIComponent(NEGOCIO_ID)}&`;
+      if (NICHO_ID) url += `nichoId=${encodeURIComponent(NICHO_ID)}&`;
       if (prestadorId) url += `prestadorId=${encodeURIComponent(prestadorId)}&`;
       if (dataInicio && dataFim) {
         url += `dataInicio=${encodeURIComponent(dataInicio)}&dataFim=${encodeURIComponent(dataFim)}&`;

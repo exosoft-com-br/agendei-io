@@ -302,11 +302,17 @@ bookingRouter.get("/booking", async (req: Request, res: Response) => {
       }
 
       if (!prestadorIds.length) {
-        return res.json({ agendamentos: [] });
+        // Último recurso: filtra por nichoId se disponível
+        if (nichoId) {
+          query = supabase.from("agendamentos").select("*, prestadores(nome)");
+          query = query.eq("nicho_id", nichoId as string);
+        } else {
+          return res.json({ agendamentos: [] });
+        }
+      } else {
+        query = supabase.from("agendamentos").select("*, prestadores(nome)");
+        query = query.in("prestador_id", prestadorIds);
       }
-
-      query = supabase.from("agendamentos").select("*, prestadores(nome)");
-      query = query.in("prestador_id", prestadorIds);
     } else {
       query = supabase.from("agendamentos").select("*, prestadores(nome)");
       if (nichoId) {
