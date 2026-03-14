@@ -199,7 +199,7 @@
       const clienteTelefone = document.getElementById('clienteTelefone').value.trim();
       
       let url = `/booking?`;
-      if (NICHO_ID) url += `nichoId=${encodeURIComponent(NICHO_ID)}&`;
+      url += `negocioId=${encodeURIComponent(NEGOCIO_ID)}&`;
       if (prestadorId) url += `prestadorId=${encodeURIComponent(prestadorId)}&`;
       // Filtro por semana
       const dataInicio = document.getElementById('dataInicio').value;
