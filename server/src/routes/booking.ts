@@ -273,46 +273,31 @@ bookingRouter.get("/booking", async (req: Request, res: Response) => {
     let query;
 
     if (negocioId) {
-      // Tenta buscar prestadores pelo negocio_id (coluna nova).
-      // Se não houver resultado, faz fallback pelo nicho_id do negócio.
-      let prestadorIds: string[] = [];
+      // Busca o nicho_id do negócio e usa-o para encontrar TODOS os prestadores
+      // (negocio_id nos prestadores é opcional e inconsistente — não usar como filtro primário)
+      const { data: negocioData } = await supabase
+        .from("negocios")
+        .select("nicho_id")
+        .eq("id", negocioId)
+        .single();
 
-      const { data: prestByNegocio } = await supabase
+      if (!negocioData?.nicho_id) {
+        return res.json({ agendamentos: [] });
+      }
+
+      const { data: prestByNicho } = await supabase
         .from("prestadores")
         .select("id")
-        .eq("negocio_id", negocioId);
+        .eq("nicho_id", negocioData.nicho_id);
 
-      if (prestByNegocio && prestByNegocio.length > 0) {
-        prestadorIds = prestByNegocio.map((p: any) => p.id);
-      } else {
-        // Fallback: busca nicho_id do negócio e filtra prestadores por nicho
-        const { data: negocio } = await supabase
-          .from("negocios")
-          .select("nicho_id")
-          .eq("id", negocioId)
-          .single();
-
-        if (negocio?.nicho_id) {
-          const { data: prestByNicho } = await supabase
-            .from("prestadores")
-            .select("id")
-            .eq("nicho_id", negocio.nicho_id);
-          prestadorIds = (prestByNicho || []).map((p: any) => p.id);
-        }
-      }
+      const prestadorIds = (prestByNicho || []).map((p: any) => p.id);
 
       if (!prestadorIds.length) {
-        // Último recurso: filtra por nichoId se disponível
-        if (nichoId) {
-          query = supabase.from("agendamentos").select("*, prestadores(nome)");
-          query = query.eq("nicho_id", nichoId as string);
-        } else {
-          return res.json({ agendamentos: [] });
-        }
-      } else {
-        query = supabase.from("agendamentos").select("*, prestadores(nome)");
-        query = query.in("prestador_id", prestadorIds);
+        return res.json({ agendamentos: [] });
       }
+
+      query = supabase.from("agendamentos").select("*, prestadores(nome)");
+      query = query.in("prestador_id", prestadorIds);
     } else {
       query = supabase.from("agendamentos").select("*, prestadores(nome)");
       if (nichoId) {
@@ -325,18 +310,25 @@ bookingRouter.get("/booking", async (req: Request, res: Response) => {
       query = query.eq("prestador_id", prestadorId);
     }
 
+    // Parse de data considerando fuso de Brasília (UTC-3)
+    // "2026-03-15" sem timezone = UTC midnight, mas queremos midnight de SP (= UTC+3h)
+    const SP_OFFSET_MS = 3 * 60 * 60 * 1000; // UTC-3 → soma 3h ao UTC midnight
+    function parseDateSP(dateStr: string): Date {
+      return new Date(new Date(dateStr).getTime() + SP_OFFSET_MS);
+    }
+
     // Filtro de data: intervalo tem prioridade sobre data única
     if (dataInicio && dataFim) {
-      const start = new Date(dataInicio as string);
-      const end = new Date(dataFim as string);
-      end.setDate(end.getDate() + 1); // inclui o último dia do intervalo
+      const start = parseDateSP(dataInicio as string);
+      const end = parseDateSP(dataFim as string);
+      end.setUTCDate(end.getUTCDate() + 1); // inclui o último dia do intervalo
       query = query
         .gte("data_hora", start.toISOString())
         .lt("data_hora", end.toISOString());
     } else if (data) {
-      const start = new Date(data as string);
+      const start = parseDateSP(data as string);
       const end = new Date(start);
-      end.setDate(start.getDate() + 1);
+      end.setUTCDate(end.getUTCDate() + 1);
       query = query
         .gte("data_hora", start.toISOString())
         .lt("data_hora", end.toISOString());

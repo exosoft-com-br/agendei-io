@@ -304,15 +304,11 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Data específica</label>
-          <input type="date" id="data" placeholder="dd/mm/aaaa">
-        </div>
-        <div class="form-group">
-          <label>Período — início</label>
+          <label>De</label>
           <input type="date" id="dataInicio">
         </div>
         <div class="form-group">
-          <label>Período — fim</label>
+          <label>Até</label>
           <input type="date" id="dataFim">
         </div>
         <div class="form-group">
@@ -424,7 +420,6 @@
     function toISO(d) { return d.toISOString().split('T')[0]; }
 
     function filtrarPeriodo(periodo) {
-      // Limpa todos os botões ativos
       document.querySelectorAll('.btn-period').forEach(b => b.classList.remove('active'));
       const btn = document.getElementById(`btn-${periodo}`);
       if (btn) btn.classList.add('active');
@@ -432,26 +427,25 @@
       const hoje = new Date();
       hoje.setHours(0,0,0,0);
 
-      // Limpa campos de data
-      document.getElementById('data').value = '';
       document.getElementById('dataInicio').value = '';
       document.getElementById('dataFim').value = '';
 
       switch (periodo) {
         case 'hoje':
-          document.getElementById('data').value = toISO(hoje);
+          document.getElementById('dataInicio').value = toISO(hoje);
+          document.getElementById('dataFim').value = toISO(hoje);
           break;
 
         case 'amanha': {
           const amanha = new Date(hoje);
           amanha.setDate(hoje.getDate() + 1);
-          document.getElementById('data').value = toISO(amanha);
+          document.getElementById('dataInicio').value = toISO(amanha);
+          document.getElementById('dataFim').value = toISO(amanha);
           break;
         }
 
         case 'semana': {
-          // Segunda a domingo da semana atual
-          const diaSemana = hoje.getDay(); // 0=dom, 1=seg...
+          const diaSemana = hoje.getDay();
           const seg = new Date(hoje);
           seg.setDate(hoje.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1));
           const dom = new Date(seg);
@@ -481,7 +475,6 @@
         }
 
         case 'todos':
-          // Sem filtro de data
           break;
       }
 
@@ -490,7 +483,6 @@
 
     function limparFiltros() {
       document.getElementById('prestadorId').value = '';
-      document.getElementById('data').value = '';
       document.getElementById('dataInicio').value = '';
       document.getElementById('dataFim').value = '';
       document.getElementById('clienteNome').value = '';
@@ -570,7 +562,6 @@
     // === CARREGAR AGENDA ===
     async function carregarAgenda() {
       const prestadorId = document.getElementById('prestadorId').value;
-      const data = document.getElementById('data').value;
       const dataInicio = document.getElementById('dataInicio').value;
       const dataFim = document.getElementById('dataFim').value;
       const clienteNome = document.getElementById('clienteNome').value.trim();
@@ -589,8 +580,8 @@
       if (prestadorId) url += `prestadorId=${encodeURIComponent(prestadorId)}&`;
       if (dataInicio && dataFim) {
         url += `dataInicio=${encodeURIComponent(dataInicio)}&dataFim=${encodeURIComponent(dataFim)}&`;
-      } else if (data) {
-        url += `data=${encodeURIComponent(data)}&`;
+      } else if (dataInicio) {
+        url += `data=${encodeURIComponent(dataInicio)}&`;
       }
       if (clienteNome) url += `clienteNome=${encodeURIComponent(clienteNome)}&`;
       if (clienteTelefone) url += `clienteTelefone=${encodeURIComponent(clienteTelefone)}&`;
@@ -686,7 +677,6 @@
 
     // Eventos dos filtros
     document.getElementById('prestadorId').onchange = carregarAgenda;
-    document.getElementById('data').onchange = onDataManual;
     document.getElementById('dataInicio').onchange = onDataManual;
     document.getElementById('dataFim').onchange = onDataManual;
     document.getElementById('clienteNome').oninput = carregarAgenda;
