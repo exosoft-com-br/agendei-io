@@ -634,7 +634,6 @@
     <div class="card" id="formNovoPrestador" style="display:none">
       <h2>Novo Prestador</h2>
       <div class="form-row">
-        <div class="form-group"><label>ID (slug único) *</label><input type="text" id="spId" placeholder="ex: joao-silva"></div>
         <div class="form-group"><label>Nome *</label><input type="text" id="spNome" placeholder="Nome do prestador"></div>
       </div>
       <div class="form-group"><label>Categoria</label><input type="text" id="spCategoria" placeholder="ex: Barbeiro, Médico, Dentista"></div>
@@ -672,7 +671,6 @@
       <h2>Novo Serviço</h2>
       <div class="form-group"><label>Prestador *</label><select id="ssPrestadorId"></select></div>
       <div class="form-row">
-        <div class="form-group"><label>ID (slug único) *</label><input type="text" id="ssId" placeholder="ex: corte-simples"></div>
         <div class="form-group"><label>Nome do Serviço *</label><input type="text" id="ssNome" placeholder="ex: Corte Simples"></div>
       </div>
       <div class="form-row">
@@ -1576,7 +1574,6 @@
         const body = {
           nichoId,
           negocioId,
-          id: document.getElementById('spId').value.trim(),
           nome: document.getElementById('spNome').value.trim(),
           categoria: document.getElementById('spCategoria').value.trim(),
           horarioInicio: document.getElementById('spHorarioInicio').value,
@@ -1584,12 +1581,12 @@
           diasSemana: dias,
           whatsappNumero: document.getElementById('spWhatsapp').value.trim(),
         };
-        if (!body.id || !body.nome) { showAlert('error', 'ID e Nome são obrigatórios.'); return; }
+        if (!body.nome) { showAlert('error', 'Nome é obrigatório.'); return; }
         const data = await apiFetch('/prestadores', { method: 'POST', body: JSON.stringify(body) });
         if (data.erro) { showAlert('error', data.erro); return; }
         showAlert('success', `Prestador "${body.nome}" criado!`);
         toggleNovoPrestador();
-        ['spId','spNome','spCategoria','spWhatsapp'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+        ['spNome','spCategoria','spWhatsapp'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
         carregarPrestadoresServicos();
       } catch (e) { showAlert('error', 'Erro: ' + e.message); }
     }
@@ -1688,7 +1685,6 @@
         const body = {
           nichoId,
           prestadorId: document.getElementById('ssPrestadorId').value,
-          id: document.getElementById('ssId').value.trim(),
           nome: document.getElementById('ssNome').value.trim(),
           duracaoMinutos: parseInt(document.getElementById('ssDuracao').value) || 30,
           preco: parseFloat(document.getElementById('ssPreco').value) || null,
@@ -1698,7 +1694,7 @@
         if (data.erro) { showAlert('error', data.erro); return; }
         showAlert('success', `Serviço "${body.nome}" criado!`);
         toggleNovoServico();
-        ['ssId','ssNome','ssDuracao','ssPreco'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+        ['ssNome','ssDuracao','ssPreco'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
         document.getElementById('ssDuracao').value = '30';
         carregarPrestadoresServicos();
       } catch (e) { showAlert('error', 'Erro: ' + e.message); }
