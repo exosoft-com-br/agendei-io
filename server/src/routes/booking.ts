@@ -277,7 +277,7 @@ bookingRouter.post("/booking/cancel", async (req: Request, res: Response) => {
  *               clienteNome, clienteTelefone
  * Requer autenticação (Bearer token).
  */
-bookingRouter.get("/booking", autenticar(), async (req: Request, res: Response) => {
+bookingRouter.get("/booking", autenticar, async (req: Request, res: Response) => {
   try {
     const {
       data,
@@ -394,7 +394,7 @@ bookingRouter.get("/booking", autenticar(), async (req: Request, res: Response) 
  * Edita um agendamento existente (status, data/hora, cliente, prestador, serviço).
  * Requer autenticação (Bearer token).
  */
-bookingRouter.put("/booking/:id", autenticar(), async (req: Request, res: Response) => {
+bookingRouter.put("/booking/:id", autenticar, async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
     if (!id) { res.status(400).json({ erro: "ID do agendamento obrigatório." }); return; }
@@ -552,7 +552,7 @@ bookingRouter.get("/clientes/buscar", async (req: Request, res: Response) => {
  * Retorna o total de clientes únicos cadastrados no negócio.
  * Requer autenticação.
  */
-bookingRouter.get("/clientes/count", autenticar(), async (req: Request, res: Response) => {
+bookingRouter.get("/clientes/count", autenticar, async (req: Request, res: Response) => {
   try {
     const negocioId = sanitizarId(req.query.negocioId as string);
     if (!negocioId) {
