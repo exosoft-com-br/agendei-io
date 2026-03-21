@@ -36,7 +36,7 @@ bookingRouter.post("/booking", async (req: Request, res: Response) => {
     // Validar formato do telefone
     if (!validarTelefone(clienteTelefone)) {
       res.status(400).json({
-        erro: "Formato de telefone inválido. Use apenas números com DDD + DDI (ex: 5511999999999).",
+        erro: "Telefone inválido. Use apenas números com DDD (ex: 11999999999 ou 5511999999999).",
       });
       return;
     }
@@ -460,25 +460,54 @@ bookingRouter.get("/clientes/buscar", async (req: Request, res: Response) => {
       return;
     }
 
-    const { data, error } = await supabase
+    // 1ª tentativa: tabela clientes (mais rápida, tem contador)
+    const { data: clienteRow } = await supabase
       .from("clientes")
       .select("nome, telefone, total_agendamentos")
       .eq("negocio_id", negocioId)
       .ilike("telefone", `%${telefone}%`)
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
-      res.json({ encontrado: false });
+    if (clienteRow) {
+      res.json({
+        encontrado: true,
+        nome: clienteRow.nome,
+        telefone: clienteRow.telefone,
+        totalAgendamentos: clienteRow.total_agendamentos,
+      });
       return;
     }
 
-    res.json({
-      encontrado: true,
-      nome: data.nome,
-      telefone: data.telefone,
-      totalAgendamentos: data.total_agendamentos,
-    });
+    // 2ª tentativa: fallback nos agendamentos existentes (funciona sem a tabela clientes)
+    const { data: negocioRow } = await supabase
+      .from("negocios")
+      .select("nicho_id")
+      .eq("id", negocioId)
+      .single();
+
+    if (negocioRow?.nicho_id) {
+      const { data: agRow } = await supabase
+        .from("agendamentos")
+        .select("cliente_nome, cliente_telefone")
+        .eq("nicho_id", negocioRow.nicho_id)
+        .ilike("cliente_telefone", `%${telefone}%`)
+        .order("criado_em", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (agRow) {
+        res.json({
+          encontrado: true,
+          nome: agRow.cliente_nome,
+          telefone: agRow.cliente_telefone,
+          totalAgendamentos: null,
+        });
+        return;
+      }
+    }
+
+    res.json({ encontrado: false });
   } catch (erro) {
     console.error("Erro ao buscar cliente:", erro);
     res.json({ encontrado: false });

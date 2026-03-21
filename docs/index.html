@@ -252,7 +252,7 @@
       <!-- Step 1: Dados do cliente -->
       <div id="step1" class="step">
         <label>Seu WhatsApp (com DDD)</label>
-        <input type="tel" id="clienteTelefone" placeholder="5511999999999" pattern="\d{10,13}" autocomplete="tel" oninput="onTelefoneInput()">
+        <input type="tel" id="clienteTelefone" placeholder="11999999999" pattern="\d{10,13}" autocomplete="tel" oninput="onTelefoneInput()">
         <div class="hint-buscando" id="hintBuscando">🔍 Buscando seu cadastro...</div>
         <div class="cliente-hint" id="clienteHint">
           <span class="hint-icon">👋</span>
@@ -451,7 +451,7 @@
       const nome = document.getElementById('clienteNome').value.trim();
       const tel = document.getElementById('clienteTelefone').value.trim();
       if (nome.length < 3) { document.getElementById('err1').textContent = 'Nome deve ter pelo menos 3 caracteres.'; return; }
-      if (!/^\d{10,13}$/.test(tel)) { document.getElementById('err1').textContent = 'Telefone inválido (ex: 5511999999999).'; return; }
+      if (!/^\d{10,13}$/.test(tel)) { document.getElementById('err1').textContent = 'Telefone inválido. Use apenas números com DDD (ex: 11999999999).'; return; }
       document.getElementById('err1').textContent = '';
 
       const list = document.getElementById('servicosList');

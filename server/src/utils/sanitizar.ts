@@ -28,10 +28,11 @@ export function sanitizarId(input: string): string | null {
 }
 
 /**
- * Valida formato de telefone brasileiro (DDI + DDD + número).
+ * Valida telefone pela quantidade de dígitos (10–13).
+ * Aceita com ou sem DDI (55).
  */
 export function validarTelefone(telefone: string): boolean {
-  return /^\d{12,13}$/.test(telefone);
+  return /^\d{10,13}$/.test(telefone);
 }
 
 /**

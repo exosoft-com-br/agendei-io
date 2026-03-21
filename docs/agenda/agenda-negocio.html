@@ -608,7 +608,7 @@
           </select>
         </div>
       </div>
-      <div id="editErro" style="color:#c62828;font-size:.82rem;margin-top:8px"></div>
+      <div id="editErro" style="display:none;color:#c62828;font-size:.84rem;font-weight:600;background:#fff5f5;border:1px solid #f5c6c6;border-radius:8px;padding:10px 12px;margin-top:10px"></div>
       <div class="modal-actions">
         <button class="btn-cancelar-modal" onclick="fecharModal()">Cancelar</button>
         <button class="btn-salvar" onclick="salvarEdicao()">Salvar alterações</button>
@@ -839,6 +839,19 @@
     }
 
     // ============================================================
+    // ESCAPE HTML — evita quebra do DOM com caracteres especiais
+    // ============================================================
+    function esc(str) {
+      if (str == null) return '—';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // ============================================================
     // BADGE
     // ============================================================
     function badgeStatus(status) {
@@ -1012,26 +1025,33 @@
         agendamentos.forEach(ag => {
           const data      = formatarData(ag.data_hora);
           const hora      = formatarHora(ag.data_hora);
-          const tel       = ag.cliente_telefone || '—';
-          const svc       = ag.servicoNome || servicosMap[ag.servico_id]?.nome || ag.servico_id || '—';
-          const prest     = ag.prestadorNome || prestadoresMap[ag.prestador_id] || '—';
+          const tel       = esc(ag.cliente_telefone);
+          const svc       = esc(ag.servicoNome || servicosMap[ag.servico_id]?.nome || ag.servico_id);
+          const prest     = esc(ag.prestadorNome || prestadoresMap[ag.prestador_id]);
           const preco     = resolverPreco(ag);
           const precoFmt  = preco != null ? formatarPreco(preco) : '—';
 
-          tbody.innerHTML += `
+          // insertAdjacentHTML evita re-parsear todo o tbody a cada linha
+          tbody.insertAdjacentHTML('beforeend', `
             <tr>
               <td class="hora-cell">${data}</td>
               <td class="hora-cell">${hora}</td>
-              <td><strong>${ag.cliente_nome || '—'}</strong></td>
+              <td><strong>${esc(ag.cliente_nome)}</strong></td>
               <td>${tel}</td>
               <td>${svc}</td>
               <td>${prest}</td>
               <td class="preco-cell">${precoFmt}</td>
               <td>${badgeStatus(ag.status)}</td>
-              <td class="protocolo-cell">${ag.protocolo || '—'}</td>
-              <td><button class="btn-editar" onclick="abrirModal('${ag.id}')">✏️ Editar</button></td>
-            </tr>`;
+              <td class="protocolo-cell">${esc(ag.protocolo)}</td>
+              <td><button class="btn-editar" data-id="${ag.id}">✏️ Editar</button></td>
+            </tr>`);
         });
+
+        // Delegação de eventos — 1 listener no tbody, não 1 por linha
+        tbody.onclick = (e) => {
+          const btn = e.target.closest('[data-id]');
+          if (btn) abrirModal(btn.dataset.id);
+        };
 
         // ── CARDS MOBILE ──
         const list = document.getElementById('agendaList');
@@ -1039,8 +1059,8 @@
         agendamentos.forEach(ag => {
           const data     = formatarData(ag.data_hora);
           const hora     = formatarHora(ag.data_hora);
-          const svc      = ag.servicoNome || servicosMap[ag.servico_id]?.nome || ag.servico_id || '—';
-          const prest    = ag.prestadorNome || prestadoresMap[ag.prestador_id] || '—';
+          const svc      = esc(ag.servicoNome || servicosMap[ag.servico_id]?.nome || ag.servico_id);
+          const prest    = esc(ag.prestadorNome || prestadoresMap[ag.prestador_id]);
           const precoMob = resolverPreco(ag);
           const precoFmt = precoMob != null ? formatarPreco(precoMob) : null;
 
@@ -1052,18 +1072,24 @@
               <div class="ag-data-mob">${data}</div>
             </div>
             <div class="ag-info">
-              <div class="ag-cliente">${ag.cliente_nome || '—'}</div>
+              <div class="ag-cliente">${esc(ag.cliente_nome)}</div>
               <div class="ag-detalhe">🔧 ${svc} · 👤 ${prest}</div>
-              <div class="ag-detalhe">📞 ${ag.cliente_telefone || '—'}</div>
+              <div class="ag-detalhe">📞 ${esc(ag.cliente_telefone)}</div>
               ${precoFmt ? `<div class="ag-preco">💰 ${precoFmt}</div>` : ''}
-              <div class="ag-protocolo">${ag.protocolo || ''}</div>
+              <div class="ag-protocolo">${esc(ag.protocolo)}</div>
             </div>
             <div class="ag-status" style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
               ${badgeStatus(ag.status)}
-              <button class="btn-editar" onclick="abrirModal('${ag.id}')">✏️</button>
+              <button class="btn-editar" data-id="${ag.id}">✏️</button>
             </div>`;
           list.appendChild(div);
         });
+
+        // Delegação de eventos nos cards mobile
+        list.onclick = (e) => {
+          const btn = e.target.closest('[data-id]');
+          if (btn) abrirModal(btn.dataset.id);
+        };
 
         document.querySelector('.agenda-card').classList.add('tem-dados');
         document.getElementById('agendaEmpty').style.display = 'none';
@@ -1127,20 +1153,35 @@
 
     async function salvarEdicao() {
       if (!editandoId) return;
-      document.getElementById('editErro').textContent = '';
+
+      const erroEl = document.getElementById('editErro');
+      const btnSalvar = document.querySelector('.btn-salvar');
+      erroEl.textContent = '';
+      erroEl.style.display = 'none';
+
+      // Validar telefone por tamanho (10–13 dígitos)
+      const telRaw = document.getElementById('editTelefone').value.replace(/\D/g, '');
+      if (telRaw.length < 10 || telRaw.length > 13) {
+        erroEl.textContent = 'Telefone inválido (10 a 13 dígitos numéricos).';
+        erroEl.style.display = 'block';
+        return;
+      }
 
       const data    = document.getElementById('editData').value;
       const hora    = document.getElementById('editHora').value;
       const dataHora = data && hora ? `${data}T${hora}:00-03:00` : undefined;
 
       const body = {
-        clienteNome:    document.getElementById('editNome').value.trim(),
-        clienteTelefone: document.getElementById('editTelefone').value.trim(),
+        clienteNome:     document.getElementById('editNome').value.trim(),
+        clienteTelefone: telRaw,
         status:          document.getElementById('editStatus').value,
         prestadorId:     document.getElementById('editPrestador').value,
         servicoId:       document.getElementById('editServico').value,
         ...(dataHora ? { dataHora } : {}),
       };
+
+      btnSalvar.disabled = true;
+      btnSalvar.textContent = '⏳ Salvando...';
 
       try {
         const res  = await fetch(`${API_URL}/api/booking/${editandoId}`, {
@@ -1151,18 +1192,26 @@
           },
           body: JSON.stringify(body),
         });
-        const json = await res.json();
+
         if (res.status === 401) { removerToken(); mostrarLogin(); return; }
+
+        const json = await res.json();
         if (!res.ok || !json.sucesso) {
-          document.getElementById('editErro').textContent = json.erro || 'Erro ao salvar.';
+          erroEl.textContent = json.erro || 'Erro ao salvar. Tente novamente.';
+          erroEl.style.display = 'block';
           return;
         }
+
         document.getElementById('modalOverlay').classList.remove('open');
         editandoId = null;
         mostrarToast('Agendamento atualizado!');
         carregarAgenda();
       } catch (e) {
-        document.getElementById('editErro').textContent = `Erro: ${e.message}`;
+        erroEl.textContent = `Erro de conexão: ${e.message}`;
+        erroEl.style.display = 'block';
+      } finally {
+        btnSalvar.disabled = false;
+        btnSalvar.textContent = 'Salvar alterações';
       }
     }
 
