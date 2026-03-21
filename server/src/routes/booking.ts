@@ -446,6 +446,46 @@ bookingRouter.put("/booking/:id", autenticar(), async (req: Request, res: Respon
 });
 
 /**
+ * GET /api/clientes/buscar?negocioId=xxx&telefone=yyy
+ * Rota PÚBLICA — busca cliente por telefone dentro de um negócio.
+ * Retorna nome caso encontrado, para auto-preenchimento na página de agendamento.
+ */
+bookingRouter.get("/clientes/buscar", async (req: Request, res: Response) => {
+  try {
+    const negocioId = sanitizarId(req.query.negocioId as string);
+    const telefone  = ((req.query.telefone as string) || "").replace(/\D/g, "");
+
+    if (!negocioId || telefone.length < 10) {
+      res.json({ encontrado: false });
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("clientes")
+      .select("nome, telefone, total_agendamentos")
+      .eq("negocio_id", negocioId)
+      .ilike("telefone", `%${telefone}%`)
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      res.json({ encontrado: false });
+      return;
+    }
+
+    res.json({
+      encontrado: true,
+      nome: data.nome,
+      telefone: data.telefone,
+      totalAgendamentos: data.total_agendamentos,
+    });
+  } catch (erro) {
+    console.error("Erro ao buscar cliente:", erro);
+    res.json({ encontrado: false });
+  }
+});
+
+/**
  * GET /api/clientes/count?negocioId=xxx
  * Retorna o total de clientes únicos cadastrados no negócio.
  * Requer autenticação.
