@@ -157,22 +157,21 @@ bookingRouter.post("/booking", async (req: Request, res: Response) => {
     }).catch(() => {});
 
     // Registrar/atualizar cliente por negócio (fire-and-forget)
-    supabase
-      .from("negocios")
-      .select("id")
-      .eq("nicho_id", nichoId)
-      .limit(1)
-      .single()
-      .then(({ data: negocioRow }) => {
-        if (!negocioRow?.id) return;
-        return supabase.rpc("registrar_cliente_agendamento", {
-          p_negocio_id: negocioRow.id,
-          p_nome: clienteNome,
-          p_telefone: clienteTelefone,
-          p_data_hora: dataHoraObj.toISOString(),
-        });
-      })
-      .catch(() => {});
+    (async () => {
+      const { data: negocioRow } = await supabase
+        .from("negocios")
+        .select("id")
+        .eq("nicho_id", nichoId)
+        .limit(1)
+        .single();
+      if (!negocioRow?.id) return;
+      await supabase.rpc("registrar_cliente_agendamento", {
+        p_negocio_id: negocioRow.id,
+        p_nome: clienteNome,
+        p_telefone: clienteTelefone,
+        p_data_hora: dataHoraObj.toISOString(),
+      });
+    })().catch(() => {});
 
     res.status(201).json({
       sucesso: true,
