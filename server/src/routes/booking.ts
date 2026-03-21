@@ -3,6 +3,7 @@ import { supabase } from "../supabaseClient";
 import { gerarProtocolo } from "../utils/gerarProtocolo";
 import { notificarConfirmacao, notificarCancelamento } from "../utils/notificacao";
 import { sanitizar, sanitizarId, validarTelefone, validarDataHora } from "../utils/sanitizar";
+import { autenticar } from "../middleware/auth";
 
 export const bookingRouter = Router();
 
@@ -155,6 +156,24 @@ bookingRouter.post("/booking", async (req: Request, res: Response) => {
       dataFormatada,
     }).catch(() => {});
 
+    // Registrar/atualizar cliente por negócio (fire-and-forget)
+    supabase
+      .from("negocios")
+      .select("id")
+      .eq("nicho_id", nichoId)
+      .limit(1)
+      .single()
+      .then(({ data: negocioRow }) => {
+        if (!negocioRow?.id) return;
+        return supabase.rpc("registrar_cliente_agendamento", {
+          p_negocio_id: negocioRow.id,
+          p_nome: clienteNome,
+          p_telefone: clienteTelefone,
+          p_data_hora: dataHoraObj.toISOString(),
+        });
+      })
+      .catch(() => {});
+
     res.status(201).json({
       sucesso: true,
       agendamento: {
@@ -256,8 +275,9 @@ bookingRouter.post("/booking/cancel", async (req: Request, res: Response) => {
  * Query params: negocioId, nichoId, prestadorId,
  *               data (YYYY-MM-DD), dataInicio + dataFim (range),
  *               clienteNome, clienteTelefone
+ * Requer autenticação (Bearer token).
  */
-bookingRouter.get("/booking", async (req: Request, res: Response) => {
+bookingRouter.get("/booking", autenticar(), async (req: Request, res: Response) => {
   try {
     const {
       data,
@@ -296,10 +316,10 @@ bookingRouter.get("/booking", async (req: Request, res: Response) => {
         return res.json({ agendamentos: [] });
       }
 
-      query = supabase.from("agendamentos").select("*, prestadores(nome)");
+      query = supabase.from("agendamentos").select("*, prestadores(nome), servicos(nome,preco)");
       query = query.in("prestador_id", prestadorIds);
     } else {
-      query = supabase.from("agendamentos").select("*, prestadores(nome)");
+      query = supabase.from("agendamentos").select("*, prestadores(nome), servicos(nome,preco)");
       if (nichoId) {
         query = query.eq("nicho_id", nichoId);
       }
@@ -356,7 +376,10 @@ bookingRouter.get("/booking", async (req: Request, res: Response) => {
     const mappedAgendamentos = agendamentos.map((ag: any) => ({
       ...ag,
       prestadores: undefined,
+      servicos: undefined,
       prestadorNome: ag.prestadores?.nome || null,
+      servicoNome: ag.servicos?.nome || null,
+      servicoPreco: ag.servicos?.preco ?? null,
     }));
 
     res.json({ agendamentos: mappedAgendamentos });
@@ -369,8 +392,9 @@ bookingRouter.get("/booking", async (req: Request, res: Response) => {
 /**
  * PUT /api/booking/:id
  * Edita um agendamento existente (status, data/hora, cliente, prestador, serviço).
+ * Requer autenticação (Bearer token).
  */
-bookingRouter.put("/booking/:id", async (req: Request, res: Response) => {
+bookingRouter.put("/booking/:id", autenticar(), async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
     if (!id) { res.status(400).json({ erro: "ID do agendamento obrigatório." }); return; }
@@ -418,5 +442,36 @@ bookingRouter.put("/booking/:id", async (req: Request, res: Response) => {
   } catch (erro) {
     console.error("Erro ao editar agendamento:", erro);
     res.status(500).json({ erro: "Erro interno ao editar agendamento." });
+  }
+});
+
+/**
+ * GET /api/clientes/count?negocioId=xxx
+ * Retorna o total de clientes únicos cadastrados no negócio.
+ * Requer autenticação.
+ */
+bookingRouter.get("/clientes/count", autenticar(), async (req: Request, res: Response) => {
+  try {
+    const negocioId = sanitizarId(req.query.negocioId as string);
+    if (!negocioId) {
+      res.status(400).json({ erro: "negocioId obrigatório." });
+      return;
+    }
+
+    const { count, error } = await supabase
+      .from("clientes")
+      .select("id", { count: "exact", head: true })
+      .eq("negocio_id", negocioId);
+
+    if (error) {
+      console.error("Erro ao contar clientes:", error);
+      res.status(500).json({ erro: "Erro ao contar clientes." });
+      return;
+    }
+
+    res.json({ total: count ?? 0 });
+  } catch (erro) {
+    console.error("Erro interno ao contar clientes:", erro);
+    res.status(500).json({ erro: "Erro interno." });
   }
 });
