@@ -11,6 +11,9 @@ function limparFormulario() {
     const el = document.getElementById(id); if(el) el.value = '';
   });
   document.getElementById('linksNegocio').style.display = 'none';
+  document.getElementById('grupoAtivo').style.display = 'none';
+  document.getElementById('btnWhatsappForm').style.display = 'none';
+  window.editandoNegocioId = null;
 }
 
 async function salvarNegocio() {
@@ -25,6 +28,9 @@ async function salvarNegocio() {
     cidade: document.getElementById('cidade').value.trim(),
     estado: document.getElementById('estado').value.trim().toUpperCase(),
   };
+  if (window.editandoNegocioId) {
+    body.ativo = document.getElementById('ativo').checked;
+  }
   if (!body.nichoId || !body.nomeFantasia) { alert('Nicho e Nome Fantasia são obrigatórios.'); return; }
   let data;
   if (window.editandoNegocioId) {
@@ -146,6 +152,7 @@ async function carregarNegocios() {
           <div class='negocio-header'>
             <div class='negocio-info'>
               <strong>${n.nome_fantasia||n.nome_publico||n.nome||n.id}</strong>
+              ${n.ativo === false ? '<span style="background:#fee2e2;color:#c53030;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px">Inativo</span>' : '<span style="background:#e6f9ee;color:#276749;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px">Ativo</span>'}
               <div class='negocio-detail'>${n.descricao||''}</div>
             </div>
             <div class='negocio-actions'>
@@ -181,6 +188,10 @@ async function editarNegocio(id) {
   document.getElementById('bairro').value = n.bairro || '';
   document.getElementById('cidade').value = n.cidade || '';
   document.getElementById('estado').value = n.estado || '';
+  // Mostrar toggle ativo e botão WhatsApp no form de edição
+  document.getElementById('grupoAtivo').style.display = 'block';
+  document.getElementById('ativo').checked = n.ativo !== false;
+  document.getElementById('btnWhatsappForm').style.display = 'inline-block';
   if (id) {
     await gerarLinksNegocio(id);
     document.getElementById('linksNegocio').style.display = 'block';
