@@ -90,7 +90,10 @@ export class EvolutionAPIProvider implements WhatsAppProvider {
         `${this.apiUrl}/instance/connect/${instanceName}`,
         { headers: { apikey: this.apiToken } }
       );
-      return (response.data?.base64 as string) || null;
+      const b64 = response.data?.base64 as string | undefined;
+      if (!b64) return null;
+      // Garante prefixo data URL para exibição em <img>
+      return b64.startsWith("data:") ? b64 : `data:image/png;base64,${b64}`;
     } catch {
       return null;
     }

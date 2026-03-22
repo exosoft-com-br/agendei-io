@@ -15,58 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- Supabase Client CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <title>Admin — agendei.io</title>
-  <script>
-    // Configuração Supabase
-    const SUPABASE_URL = 'https://<SUA_INSTANCIA>.supabase.co'; // Substitua pela sua URL
-    const SUPABASE_KEY = '<SUA_CHAVE_ANON>'; // Substitua pela sua chave anon
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    // Exemplo: buscar negócios
-    async function buscarNegocios() {
-      const { data, error } = await supabase.from('negocios').select('*');
-      if (error) {
-        console.error('Erro Supabase:', error.message);
-        return [];
-      }
-      console.log('Negócios:', data);
-      return data;
-    }
-
-    // Login com Supabase
-    async function login(email, senha) {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password: senha
-      });
-      if (error) {
-        alert('Erro ao logar: ' + error.message);
-        return null;
-      }
-      alert('Login realizado com sucesso!');
-      return data;
-    }
-
-    // Cadastro com Supabase
-    async function cadastro(email, senha) {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password: senha
-      });
-      if (error) {
-        alert('Erro ao cadastrar: ' + error.message);
-        return null;
-      }
-      alert('Cadastro realizado com sucesso!');
-      return data;
-    }
-
-    // Chame buscarNegocios() quando quiser carregar os dados
-    window.addEventListener('DOMContentLoaded', () => {
-      buscarNegocios();
-    });
-  </script>
   <style>
     :root {
       --primary: #00A8C6; --primary-dark: #0090AA; --secondary: #004D61;
