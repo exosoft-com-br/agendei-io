@@ -424,7 +424,7 @@ bookingRouter.post("/booking/cancel", async (req: Request, res: Response) => {
  */
 bookingRouter.get("/booking", autenticar, async (req: Request, res: Response) => {
   try {
-    const {
+    let {
       data,
       dataInicio,
       dataFim,
@@ -434,6 +434,20 @@ bookingRouter.get("/booking", autenticar, async (req: Request, res: Response) =>
       prestadorId,
       negocioId,
     } = req.query;
+
+    // Usuários não-admin só podem ver dados do seu próprio negócio
+    if (req.auth!.role !== "admin") {
+      const negocioPermitido = req.auth!.negocioId;
+      if (!negocioPermitido) {
+        res.status(403).json({ erro: "Usuário sem negócio vinculado." });
+        return;
+      }
+      if (negocioId && negocioId !== negocioPermitido) {
+        res.status(403).json({ erro: "Acesso negado." });
+        return;
+      }
+      negocioId = negocioPermitido;
+    }
 
     let query;
 

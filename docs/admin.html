@@ -969,6 +969,11 @@
     // ========================================================================
     function iniciarPainel() {
       console.log('[ADMIN] iniciarPainel() chamado. CURRENT_USER:', JSON.stringify(CURRENT_USER));
+      // Somente admins podem acessar este painel
+      if (!isAdmin()) {
+        window.location.href = 'painel.html';
+        return;
+      }
       document.getElementById('loginOverlay').classList.add('hidden');
       document.getElementById('navbar').style.display = 'flex';
       document.getElementById('mainContent').style.display = 'block';

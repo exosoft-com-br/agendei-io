@@ -258,6 +258,15 @@ pagamentoRouter.put("/pagamento/admin/:agendamentoId", autenticar, async (req: R
   }
 
   try {
+    // Sub-usuários só podem confirmar/cancelar agendamentos do próprio negócio
+    if (req.auth!.role !== "admin") {
+      const negocioId = req.auth!.negocioId;
+      if (!negocioId) { res.status(403).json({ erro: "Sem negócio vinculado." }); return; }
+      const { data: neg } = await supabase.from("negocios").select("nicho_id").eq("id", negocioId).single();
+      if (!neg) { res.status(403).json({ erro: "Negócio não encontrado." }); return; }
+      const { data: ag } = await supabase.from("agendamentos").select("nicho_id").eq("id", agendamentoId).single();
+      if (!ag || ag.nicho_id !== neg.nicho_id) { res.status(403).json({ erro: "Acesso negado." }); return; }
+    }
     if (acao === "pago") {
       processarPagamentoConfirmado(agendamentoId).catch(console.error);
       res.json({ sucesso: true, mensagem: "Pagamento confirmado." });
@@ -280,11 +289,15 @@ pagamentoRouter.put("/pagamento/admin/:agendamentoId", autenticar, async (req: R
 pagamentoRouter.get("/pagamento/pendentes", autenticar, async (req: Request, res: Response) => {
   try {
     const ownerId = req.auth!.ownerId;
+    // Sub-usuários só veem pendentes do próprio negócio
+    const negocioRestrito = req.auth!.role !== "admin" ? req.auth!.negocioId : null;
 
-    const { data: negocios } = await supabase
+    let negociosQuery = supabase
       .from("negocios")
       .select("nicho_id, nome_fantasia")
       .eq("owner_id", ownerId);
+    if (negocioRestrito) negociosQuery = negociosQuery.eq("id", negocioRestrito);
+    const { data: negocios } = await negociosQuery;
 
     if (!negocios?.length) { res.json({ agendamentos: [] }); return; }
 
