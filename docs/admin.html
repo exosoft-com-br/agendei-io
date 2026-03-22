@@ -2145,6 +2145,7 @@
     }
 
     let _usuariosModalNegocioId = null;
+    const _usuariosMap = {};
 
     async function abrirUsuariosModal(negocioId, nomeFantasia) {
       _usuariosModalNegocioId = negocioId;
@@ -2168,6 +2169,7 @@
           list.innerHTML = '<p style="color:#999;font-size:13px">Nenhum usuário vinculado ainda.</p>';
           return;
         }
+        usuarios.forEach(u => { _usuariosMap[u.id] = u; });
         list.innerHTML = usuarios.map(u => {
           const badges = [];
           if (u.whatsapp_ativo) badges.push('<span style="font-size:10px;background:#e6f9ee;color:#276749;padding:1px 5px;border-radius:4px">📱WA</span>');
@@ -2180,7 +2182,10 @@
               <div style="font-weight:600;font-size:14px">${u.nome} ${badges.join(' ')}</div>
               <div style="color:#666;font-size:12px">${u.email}</div>
             </div>
-            <button onclick="removerUsuarioNegocio('${u.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer">Remover</button>
+            <div style="display:flex;gap:6px">
+              <button onclick="abrirEditarUsuario('${u.id}')" style="background:none;border:1px solid #667eea;color:#667eea;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer">✏️ Editar</button>
+              <button onclick="removerUsuarioNegocio('${u.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer">Remover</button>
+            </div>
           </div>`;
         }).join('');
       } catch (e) {
@@ -2217,6 +2222,45 @@
       } catch (e) { showAlert('error', 'Erro: ' + e.message); }
     }
 
+    function abrirEditarUsuario(id) {
+      const u = _usuariosMap[id];
+      if (!u) return;
+      document.getElementById('euId').value = u.id;
+      document.getElementById('euNome').value = u.nome || '';
+      document.getElementById('euEmail').value = u.email || '';
+      document.getElementById('euSenha').value = '';
+      document.getElementById('euWhatsappAtivo').checked = u.whatsapp_ativo !== false;
+      document.getElementById('euPermPrestadores').checked = !!u.perm_prestadores;
+      document.getElementById('euPermServicos').checked = !!u.perm_servicos;
+      document.getElementById('euPermAgenda').checked = !!u.perm_agenda;
+      document.getElementById('editarUsuarioModal').style.display = 'flex';
+    }
+
+    function fecharEditarUsuario() {
+      document.getElementById('editarUsuarioModal').style.display = 'none';
+    }
+
+    async function salvarEdicaoUsuario() {
+      const id = document.getElementById('euId').value;
+      const nome = document.getElementById('euNome').value.trim();
+      const email = document.getElementById('euEmail').value.trim();
+      const senha = document.getElementById('euSenha').value;
+      const body = {
+        nome, email,
+        whatsappAtivo: document.getElementById('euWhatsappAtivo').checked,
+        permPrestadores: document.getElementById('euPermPrestadores').checked,
+        permServicos: document.getElementById('euPermServicos').checked,
+        permAgenda: document.getElementById('euPermAgenda').checked,
+      };
+      if (senha) body.senha = senha;
+      try {
+        await apiFetch(`/auth/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+        fecharEditarUsuario();
+        await carregarUsuariosNegocio();
+        await carregarNegocios();
+      } catch(e) { alert('Erro ao salvar: ' + (e.message || e)); }
+    }
+
     async function removerUsuarioNegocio(usuarioId) {
       if (!confirm('Remover este usuário?')) return;
       try {
@@ -2229,5 +2273,50 @@
       } catch (e) { showAlert('error', 'Erro: ' + e.message); }
     }
   </script>
+
+  <!-- Modal Editar Usuário -->
+  <div id="editarUsuarioModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;padding:28px;max-width:480px;width:90%;position:relative;max-height:90vh;overflow-y:auto">
+      <button onclick="fecharEditarUsuario()" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer">✕</button>
+      <h3 style="margin:0 0 16px">✏️ Editar Usuário</h3>
+      <input type="hidden" id="euId">
+      <div style="display:grid;gap:10px">
+        <div>
+          <label style="font-size:12px;color:#555;display:block;margin-bottom:3px">Nome</label>
+          <input type="text" id="euNome" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:12px;color:#555;display:block;margin-bottom:3px">Email</label>
+          <input type="email" id="euEmail" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:12px;color:#555;display:block;margin-bottom:3px">Nova senha (deixe vazio para não alterar)</label>
+          <input type="password" id="euSenha" placeholder="••••••" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+        <div style="padding:10px 12px;background:#f0fff4;border-radius:8px;border:1px solid #c6f6d5">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:600;color:#276749">
+            <input type="checkbox" id="euWhatsappAtivo" style="width:16px;height:16px;accent-color:#25D366">
+            📱 WhatsApp ativo (recebe notificações)
+          </label>
+        </div>
+        <div style="padding:10px 12px;background:#f7f8ff;border-radius:8px;border:1px solid #e0e3ff">
+          <p style="font-size:12px;font-weight:700;color:#4a5568;margin:0 0 8px">🔐 Permissões no painel do negócio:</p>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#333;margin-bottom:6px;cursor:pointer">
+            <input type="checkbox" id="euPermPrestadores" style="width:15px;height:15px;accent-color:#667eea"> 👤 Gerenciar Prestadores
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#333;margin-bottom:6px;cursor:pointer">
+            <input type="checkbox" id="euPermServicos" style="width:15px;height:15px;accent-color:#667eea"> ✂️ Gerenciar Serviços
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#333;cursor:pointer">
+            <input type="checkbox" id="euPermAgenda" style="width:15px;height:15px;accent-color:#667eea"> 📆 Ajustar Agenda dos Profissionais
+          </label>
+        </div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:10px">
+        <button onclick="salvarEdicaoUsuario()" style="background:#667eea;color:#fff;border:none;padding:9px 20px;border-radius:6px;cursor:pointer;font-size:13px;flex:1">💾 Salvar</button>
+        <button onclick="fecharEditarUsuario()" style="background:#f5f5f5;color:#333;border:1px solid #ddd;padding:9px 20px;border-radius:6px;cursor:pointer;font-size:13px">Cancelar</button>
+      </div>
+    </div>
+  </div>
   </body>
   </html>

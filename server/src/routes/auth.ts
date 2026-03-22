@@ -532,6 +532,57 @@ authRouter.get("/auth/usuarios/negocio/:negocioId", autenticar, apenasAdmin, asy
 });
 
 // ============================================================
+// PUT /api/auth/usuarios/:id — Admin edita usuário
+// ============================================================
+authRouter.put("/auth/usuarios/:id", autenticar, apenasAdmin, async (req: Request, res: Response) => {
+  try {
+    const usuarioId = req.params.id;
+    const nome = req.body.nome ? sanitizar(req.body.nome) : undefined;
+    const email = req.body.email ? (req.body.email as string).trim().toLowerCase() : undefined;
+    const senha = req.body.senha || undefined;
+    const whatsappAtivo = req.body.whatsappAtivo;
+    const permPrestadores = req.body.permPrestadores;
+    const permServicos = req.body.permServicos;
+    const permAgenda = req.body.permAgenda;
+
+    const updates: Record<string, any> = {};
+    if (nome !== undefined) updates.nome = nome;
+    if (email !== undefined) updates.email = email;
+    if (senha !== undefined) {
+      if (senha.length < 6) { res.status(400).json({ erro: "Senha mínima: 6 caracteres." }); return; }
+      updates.senha_hash = await bcrypt.hash(senha, 12);
+    }
+    if (whatsappAtivo !== undefined) updates.whatsapp_ativo = !!whatsappAtivo;
+    if (permPrestadores !== undefined) updates.perm_prestadores = !!permPrestadores;
+    if (permServicos !== undefined) updates.perm_servicos = !!permServicos;
+    if (permAgenda !== undefined) updates.perm_agenda = !!permAgenda;
+
+    if (Object.keys(updates).length === 0) {
+      res.status(400).json({ erro: "Nenhum campo para atualizar." });
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("usuarios")
+      .update(updates)
+      .eq("id", usuarioId)
+      .eq("owner_id", req.auth!.userId)
+      .select("id, email, nome, role, ativo, criado_em, negocio_id, whatsapp_ativo, perm_prestadores, perm_servicos, perm_agenda")
+      .single();
+
+    if (error || !data) {
+      res.status(500).json({ erro: "Erro ao atualizar usuário." });
+      return;
+    }
+
+    res.json({ sucesso: true, usuario: data });
+  } catch (erro) {
+    console.error("Erro ao editar usuário:", erro);
+    res.status(500).json({ erro: "Erro interno." });
+  }
+});
+
+// ============================================================
 // DELETE /api/auth/usuarios/:id — Admin remove usuário
 // ============================================================
 authRouter.delete("/auth/usuarios/:id", autenticar, apenasAdmin, async (req: Request, res: Response) => {
