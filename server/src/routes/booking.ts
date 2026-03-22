@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { supabase } from "../supabaseClient";
 import { gerarProtocolo } from "../utils/gerarProtocolo";
-import { notificarConfirmacao, notificarCancelamento } from "../utils/notificacao";
+import { notificarConfirmacao, notificarCancelamento, notificarPrestadorNovoAgendamento } from "../utils/notificacao";
 import { sanitizar, sanitizarId, validarTelefone, validarDataHora } from "../utils/sanitizar";
 import { autenticar } from "../middleware/auth";
 
@@ -146,7 +146,7 @@ bookingRouter.post("/booking", async (req: Request, res: Response) => {
       .replace("{protocolo}", protocolo)
       .replace("{dataHora}", dataFormatada);
 
-    // Notificação WhatsApp (fire-and-forget)
+    // Notificação WhatsApp cliente (fire-and-forget)
     notificarConfirmacao({
       telefone: clienteTelefone,
       protocolo,
@@ -155,6 +155,17 @@ bookingRouter.post("/booking", async (req: Request, res: Response) => {
       nicho: nicho.nome_publico,
       dataFormatada,
     }).catch(() => {});
+
+    // Notificação WhatsApp prestador (fire-and-forget)
+    if (prestador.whatsapp_numero) {
+      notificarPrestadorNovoAgendamento({
+        telefonePrestador: prestador.whatsapp_numero,
+        protocolo,
+        clienteNome,
+        servico: servico.nome,
+        dataFormatada,
+      }).catch(() => {});
+    }
 
     // Registrar/atualizar cliente por negócio (fire-and-forget)
     (async () => {

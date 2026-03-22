@@ -18,6 +18,7 @@ import { authRouter } from "./routes/auth";
 
 import { servicoRouter } from "./routes/servico";
 import { googleRouter } from "./routes/google";
+import { iniciarJobLembretes } from "./utils/lembretes";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -153,6 +154,7 @@ app.use((_req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
   console.log(`🔒 CORS restrito a: ${allowedOrigins.join(", ")}`);
+  iniciarJobLembretes();
 });
 
 export default app;
