@@ -5,6 +5,7 @@ import { notificarConfirmacao, notificarCancelamento, notificarPrestadorNovoAgen
 import { sanitizar, sanitizarId, validarTelefone, validarDataHora } from "../utils/sanitizar";
 import { autenticar } from "../middleware/auth";
 import { gerarPixCopiaECola, gerarQrCodeBase64 } from "../utils/pixPayload";
+import { criarCobrancaPix, InterCredentials } from "../utils/pixInter";
 
 export const bookingRouter = Router();
 
@@ -112,7 +113,7 @@ bookingRouter.post("/booking", async (req: Request, res: Response) => {
     // Buscar negócio (taxa, PIX, WhatsApp)
     const { data: negocioTaxa } = await supabase
       .from("negocios")
-      .select("id, nome_fantasia, cidade, taxa_agendamento, taxa_ativa, pix_chave_pix, whatsapp_instancia, whatsapp_status")
+      .select("id, nome_fantasia, cidade, taxa_agendamento, taxa_ativa, pix_banco, pix_chave_pix, pix_client_id, pix_client_secret, pix_cert_pem, pix_key_pem, whatsapp_instancia, whatsapp_status")
       .eq("nicho_id", nichoId)
       .eq("ativo", true)
       .limit(1)
@@ -128,6 +129,14 @@ bookingRouter.post("/booking", async (req: Request, res: Response) => {
       });
       return;
     }
+
+    // Checar se Inter está completamente configurado (confirmação automática)
+    const interConfigurado = taxaAtiva &&
+      negocioTaxa?.pix_banco === "inter" &&
+      negocioTaxa?.pix_client_id &&
+      negocioTaxa?.pix_client_secret &&
+      negocioTaxa?.pix_cert_pem &&
+      negocioTaxa?.pix_key_pem;
 
     // Criar agendamento
     const protocolo = gerarProtocolo();
@@ -172,24 +181,56 @@ bookingRouter.post("/booking", async (req: Request, res: Response) => {
       .replace("{protocolo}", protocolo)
       .replace("{dataHora}", dataFormatada);
 
-    // ── PIX: gerar payload local (sem API de banco) ───────────────────────
-    let pixData: { txid: string; qr: string; qrImagem: string; expiraEm: string } | null = null;
+    // ── PIX: Inter API (automático) OU payload local (manual) ────────────
+    let pixData: { txid: string; qr: string; qrImagem: string; expiraEm: string; modoAuto: boolean } | null = null;
 
     if (taxaAtiva && negocioTaxa?.pix_chave_pix) {
       try {
-        const txidPix = agendamento.id.replace(/-/g, "").slice(0, 25);
-        const expiraEm = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+        let txidPix: string;
+        let qr: string;
+        let qrImagem: string;
+        let expiraEm: string;
+        let modoAuto = false;
 
-        const qr = gerarPixCopiaECola({
-          chavePix:      negocioTaxa.pix_chave_pix,
-          nomeMerchant:  negocioTaxa.nome_fantasia || "Estabelecimento",
-          cidadeMerchant: negocioTaxa.cidade || "SAO PAULO",
-          valor:         taxaCobrada,
-          txid:          txidPix,
-          descricao:     `Taxa agendamento ${protocolo}`,
-        });
+        if (interConfigurado) {
+          // ── Modo automático: Banco Inter API ─────────────────────────────
+          const creds: InterCredentials = {
+            clientId:     negocioTaxa!.pix_client_id,
+            clientSecret: negocioTaxa!.pix_client_secret,
+            chavePix:     negocioTaxa!.pix_chave_pix,
+            certPem:      negocioTaxa!.pix_cert_pem,
+            keyPem:       negocioTaxa!.pix_key_pem,
+            sandbox:      process.env.PIX_SANDBOX === "true",
+          };
 
-        const qrImagem = await gerarQrCodeBase64(qr);
+          const cobranca = await criarCobrancaPix(
+            creds,
+            taxaCobrada,
+            `Taxa agendamento ${protocolo}`
+          );
+
+          txidPix   = cobranca.txid;
+          qr        = cobranca.qr;
+          qrImagem  = cobranca.qrImagem;
+          expiraEm  = cobranca.expiraEm;
+          modoAuto  = true;
+        } else {
+          // ── Modo manual: payload PIX local (qualquer banco) ───────────────
+          txidPix  = agendamento.id.replace(/-/g, "").slice(0, 25);
+          expiraEm = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+          qr = gerarPixCopiaECola({
+            chavePix:       negocioTaxa!.pix_chave_pix,
+            nomeMerchant:   negocioTaxa!.nome_fantasia || "Estabelecimento",
+            cidadeMerchant: negocioTaxa!.cidade || "SAO PAULO",
+            valor:          taxaCobrada,
+            txid:           txidPix,
+            descricao:      `Taxa agendamento ${protocolo}`,
+          });
+
+          qrImagem = await gerarQrCodeBase64(qr);
+          modoAuto = false;
+        }
 
         // Salvar dados PIX no agendamento
         await supabase.from("agendamentos").update({
@@ -199,7 +240,8 @@ bookingRouter.post("/booking", async (req: Request, res: Response) => {
           pagamento_expira_em: expiraEm,
         }).eq("id", agendamento.id);
 
-        pixData = { txid: txidPix, qr, qrImagem, expiraEm };
+        pixData = { txid: txidPix, qr, qrImagem, expiraEm, modoAuto };
+
       } catch (e: any) {
         console.error("[booking] Erro ao gerar PIX:", e?.message);
         await supabase.from("agendamentos").delete().eq("id", agendamento.id);
@@ -218,9 +260,15 @@ bookingRouter.post("/booking", async (req: Request, res: Response) => {
           protocolo,
           taxaCobrada,
         },
-        pix: pixData,
+        pix: {
+          txid:     pixData.txid,
+          qr:       pixData.qr,
+          qrImagem: pixData.qrImagem,
+          expiraEm: pixData.expiraEm,
+          modoAuto: pixData.modoAuto,  // true = Inter API (confirmação automática); false = manual
+        },
       });
-      return;  // Notificações são enviadas após confirmação do pagamento pelo webhook/polling
+      return;  // Notificações enviadas após confirmação do pagamento (webhook Inter ou "Já Paguei")
     }
 
     // ── Sem taxa: fluxo normal ─────────────────────────────────────────────

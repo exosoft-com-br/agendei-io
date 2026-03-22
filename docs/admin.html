@@ -1203,13 +1203,59 @@
             </label>
           </div>
           <div id="e${idx}PixConfig" style="display:${n.taxaAtiva ? 'block' : 'none'}">
-            <p style="font-size:12px;color:#666;margin-bottom:10px;background:#f0f9ff;padding:8px;border-radius:6px">
-              ℹ️ O QR Code PIX é gerado automaticamente. Basta informar sua chave PIX abaixo — funciona com qualquer banco.
-            </p>
-            <div class="form-group" style="margin-bottom:4px">
+
+            <!-- Seletor de modo -->
+            <div style="display:flex;gap:8px;margin-bottom:12px">
+              <label style="flex:1;display:flex;align-items:center;gap:6px;padding:10px;border:2px solid ${n.pixBanco==='inter'?'#667eea':'#ddd'};border-radius:8px;cursor:pointer;font-size:13px" onclick="selecionarBancoPix(${idx},'inter')">
+                <input type="radio" name="e${idx}Banco" value="inter" ${n.pixBanco==='inter'||!n.pixBanco?'checked':''} style="accent-color:#667eea">
+                <span><strong>Banco Inter</strong><br><small style="color:#888">Confirmação automática via API</small></span>
+              </label>
+              <label style="flex:1;display:flex;align-items:center;gap:6px;padding:10px;border:2px solid ${n.pixBanco==='simples'?'#667eea':'#ddd'};border-radius:8px;cursor:pointer;font-size:13px" onclick="selecionarBancoPix(${idx},'simples')">
+                <input type="radio" name="e${idx}Banco" value="simples" ${n.pixBanco==='simples'?'checked':''} style="accent-color:#667eea">
+                <span><strong>Qualquer banco</strong><br><small style="color:#888">QR Code simples, confirmação manual</small></span>
+              </label>
+            </div>
+
+            <!-- Chave PIX (comum a todos) -->
+            <div class="form-group" style="margin-bottom:10px">
               <label style="font-size:12px">Chave PIX do negócio</label>
               <input type="text" id="e${idx}PixChave" value="${n.pixChavePix || ''}" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px">
-              <p style="font-size:11px;color:#999;margin-top:4px">Essa é a chave cadastrada no seu banco (Inter, C6, Nubank, Bradesco, etc.)</p>
+            </div>
+
+            <!-- Campos Inter (só aparecem se banco = inter) -->
+            <div id="e${idx}InterFields" style="display:${n.pixBanco!=='simples'?'block':'none'}">
+              <div style="background:#f0f4ff;border-radius:8px;padding:12px;margin-bottom:10px;font-size:12px;color:#555;line-height:1.6">
+                <strong>Como obter as credenciais:</strong><br>
+                1. Acesse <a href="https://developers.inter.co" target="_blank">developers.inter.co</a><br>
+                2. Crie uma aplicação → ative escopo <strong>cob.write</strong> e <strong>cob.read</strong><br>
+                3. Gere o certificado → baixe os arquivos <strong>.crt</strong> e <strong>.key</strong><br>
+                4. Abra os arquivos no bloco de notas e cole o conteúdo abaixo
+              </div>
+              <div class="form-row">
+                <div class="form-group" style="margin-bottom:8px">
+                  <label style="font-size:12px">Client ID</label>
+                  <input type="text" id="e${idx}PixClientId" value="${n.pixClientId || ''}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" style="width:100%;padding:7px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+                </div>
+                <div class="form-group" style="margin-bottom:8px">
+                  <label style="font-size:12px">Client Secret</label>
+                  <input type="password" id="e${idx}PixSecret" placeholder="${n.pixConfigurado?'(salvo — deixe vazio para manter)':'Cole aqui o secret'}" style="width:100%;padding:7px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom:8px">
+                <label style="font-size:12px">Certificado (.crt) — conteúdo completo do arquivo</label>
+                <textarea id="e${idx}PixCert" rows="4" placeholder="-----BEGIN CERTIFICATE-----&#10;MIIDxxxxxxxx...&#10;-----END CERTIFICATE-----" style="width:100%;padding:7px;border:1px solid #ddd;border-radius:6px;font-size:11px;font-family:monospace;resize:vertical">${n.pixConfigurado?'(configurado)':''}</textarea>
+              </div>
+              <div class="form-group" style="margin-bottom:4px">
+                <label style="font-size:12px">Chave Privada (.key) — conteúdo completo do arquivo</label>
+                <textarea id="e${idx}PixKey" rows="4" placeholder="-----BEGIN PRIVATE KEY-----&#10;MIIEvQIBAD...&#10;-----END PRIVATE KEY-----" style="width:100%;padding:7px;border:1px solid #ddd;border-radius:6px;font-size:11px;font-family:monospace;resize:vertical">${n.pixConfigurado?'(configurado)':''}</textarea>
+              </div>
+              ${n.pixConfigurado?'<p style="font-size:11px;color:#27ae60;margin-top:6px">✅ API do Inter configurada — confirmação automática ativa</p>':'<p style="font-size:11px;color:#e07b00;margin-top:6px">⚠️ Preencha todos os campos para ativar confirmação automática</p>'}
+            </div>
+
+            <div id="e${idx}SimplesInfo" style="display:${n.pixBanco==='simples'?'block':'none'}">
+              <p style="font-size:12px;color:#666;background:#f8f9fa;padding:8px;border-radius:6px;margin-top:4px">
+                ℹ️ O QR Code será gerado automaticamente com sua chave PIX. O cliente clica "Já Paguei" após pagar — você confirma pelo painel.
+              </p>
             </div>
           </div>
         </div>
@@ -1224,6 +1270,9 @@
     async function salvarEdicao(idx) {
       const n = negociosCache[idx];
       try {
+        // Detecta banco PIX selecionado
+        const bancoSelecionado = document.querySelector(`input[name="e${idx}Banco"]:checked`)?.value || 'inter';
+
         const body = {
           nomeFantasia: document.getElementById(`e${idx}Nome`).value.trim(),
           descricao: document.getElementById(`e${idx}Desc`).value.trim(),
@@ -1236,8 +1285,22 @@
           ativo: document.getElementById(`e${idx}Ativo`)?.checked ?? true,
           taxaAgendamento: parseFloat(document.getElementById(`e${idx}Taxa`)?.value || '0') || 0,
           taxaAtiva: document.getElementById(`e${idx}TaxaAtiva`)?.checked ?? false,
+          pixBanco: bancoSelecionado,
           pixChavePix: document.getElementById(`e${idx}PixChave`)?.value.trim() || null,
         };
+
+        // Campos exclusivos do Banco Inter
+        if (bancoSelecionado === 'inter') {
+          const clientId = document.getElementById(`e${idx}PixClientId`)?.value.trim();
+          const secret   = document.getElementById(`e${idx}PixSecret`)?.value.trim();
+          const cert     = document.getElementById(`e${idx}PixCert`)?.value.trim();
+          const key      = document.getElementById(`e${idx}PixKey`)?.value.trim();
+          // Só envia se não for o placeholder "(configurado)"
+          if (clientId) body.pixClientId = clientId;
+          if (secret && !secret.startsWith('(')) body.pixClientSecret = secret;
+          if (cert && !cert.startsWith('(')) body.pixCertPem = cert;
+          if (key && !key.startsWith('(')) body.pixKeyPem = key;
+        }
         const data = await apiFetch(`/negocios/${n.id}`, { method: 'PUT', body: JSON.stringify(body) });
         if (data.erro) { showAlert('error', data.erro); return; }
         showAlert('success', 'Negócio atualizado com sucesso!');
@@ -1993,6 +2056,19 @@
       const ativo = document.getElementById(`e${idx}TaxaAtiva`)?.checked;
       const cfg   = document.getElementById(`e${idx}PixConfig`);
       if (cfg) cfg.style.display = ativo ? 'block' : 'none';
+    }
+
+    function selecionarBancoPix(idx, banco) {
+      const interFields  = document.getElementById(`e${idx}InterFields`);
+      const simplesInfo  = document.getElementById(`e${idx}SimplesInfo`);
+      if (interFields)  interFields.style.display  = banco === 'inter'   ? 'block' : 'none';
+      if (simplesInfo)  simplesInfo.style.display   = banco === 'simples' ? 'block' : 'none';
+
+      // Atualiza borda visual dos labels
+      document.querySelectorAll(`input[name="e${idx}Banco"]`).forEach(radio => {
+        const label = radio.closest('label');
+        if (label) label.style.borderColor = radio.value === banco ? '#667eea' : '#ddd';
+      });
     }
 
     let _usuariosModalNegocioId = null;

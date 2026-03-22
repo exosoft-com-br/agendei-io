@@ -106,6 +106,23 @@
       th:nth-child(3), td:nth-child(3),
       th:nth-child(6), td:nth-child(6) { display: none; }
     }
+
+    /* Pagamentos pendentes */
+    .pendente-card {
+      background: #fff; border-radius: 10px; padding: 14px 18px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.06);
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    }
+    .pendente-card .info { flex: 1; min-width: 180px; }
+    .pendente-card .info .proto { font-family: monospace; font-size: 12px; color: #888; }
+    .pendente-card .info .nome  { font-weight: 600; font-size: 14px; }
+    .pendente-card .info .detalhe { font-size: 12px; color: #666; margin-top: 2px; }
+    .pendente-card .valor { font-size: 18px; font-weight: 700; color: #667eea; min-width: 80px; text-align:right; }
+    .pendente-card .expirado-tag { background: #fde8e8; color: #e53e3e; font-size: 11px; padding: 2px 8px; border-radius: 20px; }
+    .btn-confirmar { padding: 8px 16px; background: #27ae60; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .btn-confirmar:hover { opacity: .9; }
+    .btn-cancelar  { padding: 8px 14px; background: none; color: #e53e3e; border: 1px solid #e53e3e; border-radius: 8px; cursor: pointer; font-size: 13px; }
+    .btn-cancelar:hover { background: #fde8e8; }
   </style>
 </head>
 <body>
@@ -201,13 +218,20 @@
       </table>
       <div id="msgVazio" style="display:none">Nenhum agendamento encontrado.</div>
     </div>
+
+    <!-- Pagamentos Pendentes -->
+    <div id="secaoPendentes" style="margin-top:28px;display:none">
+      <h3 style="font-size:15px;font-weight:700;color:#333;margin-bottom:12px">⏳ Pagamentos PIX Pendentes</h3>
+      <div id="listaPendentes" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
   </div>
 </div>
 
 <script>
   const API = 'https://agendei-io-api.onrender.com/api';
   let AUTH_TOKEN = null;
-  let NEGOCIO_ID = null;
+  let NEGOCIO_ID = null;   // UUID do negócio (row id em negocios)
+  let NEGOCIO_NICHO = null; // nicho_id do negócio (usado em agendamentos)
   let NEGOCIO_NOME = null;
 
   // ── Inicialização ──────────────────────────────────────────
@@ -219,6 +243,7 @@
     if (saved && savedNegocio) {
       AUTH_TOKEN = saved;
       NEGOCIO_ID = savedNegocio;
+      NEGOCIO_NICHO = localStorage.getItem('painelNichoId');
       NEGOCIO_NOME = savedNome;
       mostrarPainel(savedUser);
     }
@@ -271,8 +296,10 @@
       const res = await fetch(`${API}/negocio/${NEGOCIO_ID}/publico`);
       if (res.ok) {
         const d = await res.json();
-        NEGOCIO_NOME = d.negocio?.nomeFantasia || 'Meu Negócio';
+        NEGOCIO_NOME  = d.negocio?.nomeFantasia || 'Meu Negócio';
+        NEGOCIO_NICHO = d.negocio?.nichoId || null;
         localStorage.setItem('painelNegocioNome', NEGOCIO_NOME);
+        if (NEGOCIO_NICHO) localStorage.setItem('painelNichoId', NEGOCIO_NICHO);
       }
     } catch { NEGOCIO_NOME = 'Meu Negócio'; }
   }
@@ -283,11 +310,13 @@
     document.getElementById('headerNome').textContent = NEGOCIO_NOME || 'Painel do Negócio';
     document.getElementById('headerUser').textContent = nomeUser || '';
     carregarAgendamentos();
+    carregarPendentes();
   }
 
   function sair() {
     localStorage.removeItem('painelToken');
     localStorage.removeItem('painelNegocioId');
+    localStorage.removeItem('painelNichoId');
     localStorage.removeItem('painelNegocioNome');
     localStorage.removeItem('painelUserNome');
     AUTH_TOKEN = null; NEGOCIO_ID = null; NEGOCIO_NOME = null;
@@ -391,6 +420,64 @@
     if (d.length === 11) return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;
     if (d.length === 10) return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;
     return t;
+  }
+
+  // ── Pagamentos Pendentes ────────────────────────────────────
+  async function carregarPendentes() {
+    try {
+      const res = await fetch(`${API}/pagamento/pendentes`, {
+        headers: { Authorization: `Bearer ${AUTH_TOKEN}` }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      // Filtra pelo nicho_id do negócio (campo em agendamentos) — ou pelo id se nicho não carregado
+      const ags = (data.agendamentos || []).filter(a =>
+        NEGOCIO_NICHO ? a.nicho_id === NEGOCIO_NICHO : true
+      );
+      const sec = document.getElementById('secaoPendentes');
+      const lista = document.getElementById('listaPendentes');
+      if (!ags.length) { sec.style.display = 'none'; return; }
+      sec.style.display = 'block';
+      lista.innerHTML = ags.map(a => {
+        const dt = new Date(a.data_hora).toLocaleString('pt-BR', {
+          timeZone: 'America/Sao_Paulo', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'
+        });
+        const expirado = a.expirado ? '<span class="expirado-tag">Expirado</span>' : '';
+        return `<div class="pendente-card" id="pend-${a.id}">
+          <div class="info">
+            <div class="proto">${a.protocolo}</div>
+            <div class="nome">${a.cliente_nome} ${expirado}</div>
+            <div class="detalhe">${formatarTel(a.cliente_telefone)} · ${dt}</div>
+          </div>
+          <div class="valor">R$ ${Number(a.taxaCobrada || 0).toFixed(2).replace('.',',')}</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-confirmar" onclick="acionarPendente('${a.id}','pago')">✅ Confirmar</button>
+            <button class="btn-cancelar"  onclick="acionarPendente('${a.id}','cancelar')">✕ Cancelar</button>
+          </div>
+        </div>`;
+      }).join('');
+    } catch { /* silencioso */ }
+  }
+
+  async function acionarPendente(id, acao) {
+    const label = acao === 'pago' ? 'confirmar pagamento' : 'cancelar agendamento';
+    if (!confirm(`Deseja ${label}?`)) return;
+    try {
+      const res = await fetch(`${API}/pagamento/admin/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${AUTH_TOKEN}` },
+        body: JSON.stringify({ acao })
+      });
+      const data = await res.json();
+      if (!res.ok || data.erro) { alert(data.erro || 'Erro ao processar.'); return; }
+      // Remove card da lista
+      document.getElementById(`pend-${id}`)?.remove();
+      // Esconde seção se vazia
+      if (!document.getElementById('listaPendentes').children.length) {
+        document.getElementById('secaoPendentes').style.display = 'none';
+      }
+      carregarAgendamentos();
+    } catch { alert('Erro de conexão.'); }
   }
 </script>
 </body>
