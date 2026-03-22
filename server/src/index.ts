@@ -141,7 +141,7 @@ app.get("/health", (_req, res) => {
 app.get("/", (_req, res) => {
   res.json({
     nome: "Plataforma de Agendamentos",
-    versao: "2.0.0",
+    versao: "2.1.0",
     status: "online",
   });
 });
