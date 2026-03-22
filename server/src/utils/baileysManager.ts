@@ -201,10 +201,50 @@ class BaileysManager {
     if (!inst?.socket || inst.status !== "conectado") {
       throw new Error("WhatsApp não conectado para este negócio");
     }
+    const jid = await this.resolverJid(inst.socket, phone);
+    if (!jid) {
+      console.warn(`[baileys] Número ${phone} não encontrado no WhatsApp — mensagem não enviada`);
+      return;
+    }
+    await inst.socket.sendMessage(jid, { text });
+  }
+
+  /**
+   * Resolve o JID correto para um número brasileiro.
+   * Tenta com o número como informado; se não encontrar e for mobile BR com 9 dígitos,
+   * tenta sem o nono dígito (compatibilidade com números antigos).
+   */
+  private async resolverJid(
+    socket: ReturnType<typeof makeWASocket>,
+    phone: string
+  ): Promise<string | null> {
     const digits = phone.replace(/\D/g, "");
     const number = digits.startsWith("55") ? digits : `55${digits}`;
-    const jid    = `${number}@s.whatsapp.net`;
-    await inst.socket.sendMessage(jid, { text });
+
+    // Tenta o número principal
+    try {
+      const results = await socket.onWhatsApp(`${number}@s.whatsapp.net`);
+      const result = results?.[0];
+      if (result?.exists) return result.jid;
+    } catch { /* continua */ }
+
+    // Para números BR com 13 dígitos (55 + DDD + 9 + 8 dígitos),
+    // tenta sem o nono dígito → 12 dígitos
+    if (number.startsWith("55") && number.length === 13) {
+      const semNono = number.slice(0, 4) + number.slice(5); // remove 5º dígito (o "9")
+      try {
+        const results = await socket.onWhatsApp(`${semNono}@s.whatsapp.net`);
+        const result = results?.[0];
+        if (result?.exists) {
+          console.log(`[baileys] Usando JID sem nono dígito: ${semNono}`);
+          return result.jid;
+        }
+      } catch { /* continua */ }
+    }
+
+    // Fallback: envia direto sem verificação
+    console.warn(`[baileys] onWhatsApp não confirmou ${number} — tentando enviar assim mesmo`);
+    return `${number}@s.whatsapp.net`;
   }
 
   private async updateStatus(negocioId: string, status: string): Promise<void> {
