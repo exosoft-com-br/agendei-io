@@ -588,6 +588,13 @@
       const data = await res.json();
       if (!res.ok || data.erro) { errEl.textContent = data.erro || 'Erro ao fazer login.'; return; }
       const user = data.usuario;
+      if (user.role === 'admin') {
+        // Admin geral usa o painel completo (admin.html)
+        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        window.location.href = 'admin.html';
+        return;
+      }
       if (!user.negocioId) { errEl.textContent = 'Usuário não vinculado a nenhum negócio. Contate o administrador.'; return; }
       AUTH_TOKEN = data.token;
       NEGOCIO_ID = user.negocioId;
