@@ -104,6 +104,10 @@ function gerarResposta(user: any) {
       negocioId: negocioId || null,
       avatarUrl: user.avatar_url || null,
       provedor: user.provedor || "email",
+      whatsappAtivo: user.whatsapp_ativo ?? true,
+      permPrestadores: user.perm_prestadores ?? false,
+      permServicos: user.perm_servicos ?? false,
+      permAgenda: user.perm_agenda ?? false,
     },
   };
 }
