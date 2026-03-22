@@ -146,7 +146,7 @@
     .tab-content.active { display: block; }
 
     /* ===== CONTAINER ===== */
-    .container { max-width: 900px; margin: 0 auto; padding: 0 16px; }
+    .container { max-width: 1140px; margin: 0 auto; padding: 0 16px; }
 
     /* ===== CARDS DE RESUMO ===== */
     .summary-row {
@@ -216,23 +216,50 @@
     .agenda-count { background: rgba(255,255,255,.2); padding: 3px 10px; border-radius: 20px; font-size: .78rem; font-weight: 700; }
     .agenda-total { background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3); padding: 3px 10px; border-radius: 20px; font-size: .78rem; font-weight: 700; }
 
-    /* ===== TABELA — DESKTOP ===== */
-    .table-scroll { overflow-x: auto; display: none; }
+    /* ===== TABELA ===== */
+    .table-scroll { overflow-x: auto; display: none; -webkit-overflow-scrolling: touch; }
     .agenda-list  { display: none; }
     .agenda-card.tem-dados .table-scroll { display: block; }
     .agenda-card.tem-dados .agenda-list  { display: none; }
-    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    table { width: 100%; border-collapse: collapse; font-size: .86rem; min-width: 760px; }
     th {
-      background: #f5f8fa; padding: 11px 14px; text-align: left; font-weight: 700;
-      color: var(--cor-secundaria); font-size: .78rem; text-transform: uppercase; letter-spacing: .05em;
+      background: #f5f8fa; padding: 10px 12px; text-align: left; font-weight: 700;
+      color: var(--cor-secundaria); font-size: .75rem; text-transform: uppercase; letter-spacing: .05em;
       border-bottom: 2px solid #dde4e8; white-space: nowrap;
     }
-    td { padding: 11px 14px; border-bottom: 1px solid #f0f4f6; vertical-align: middle; color: #333; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f0f4f6; vertical-align: middle; color: #333; }
     tr:last-child td { border-bottom: none; }
-    tr:hover td { background: rgba(0,168,198,.03); }
+    tr:hover td { background: rgba(0,168,198,.04); }
     .hora-cell      { font-weight: 800; color: var(--cor-secundaria); white-space: nowrap; }
-    .protocolo-cell { font-size: .78rem; color: #667C85; font-family: monospace; }
+    .protocolo-cell { font-size: .75rem; color: #667C85; font-family: monospace; }
     .preco-cell     { font-weight: 700; color: #1e7e4a; white-space: nowrap; }
+    .wa-cell        { white-space: nowrap; }
+    .wa-link {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 9px; border-radius: 20px; font-size: .75rem; font-weight: 700;
+      text-decoration: none; cursor: pointer; border: none; font-family: var(--fonte-corpo);
+      background: #e6f9ee; color: #1e7e4a; transition: background .15s;
+    }
+    .wa-link:hover { background: #c6f0d8; }
+    .wa-link.sem { background: #f0f0f0; color: #aaa; cursor: default; pointer-events: none; }
+
+    /* ===== PAGINAÇÃO ===== */
+    .paginacao {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; border-top: 1px solid #f0f4f6; flex-wrap: wrap; gap: 8px;
+    }
+    .pag-info { font-size: .8rem; color: #667C85; font-weight: 600; }
+    .pag-btns { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+    .pag-btn {
+      min-width: 34px; height: 34px; padding: 0 8px;
+      border: 1px solid #dde4e8; border-radius: 8px; background: #fff;
+      font-size: .82rem; font-weight: 700; cursor: pointer; color: #667C85;
+      font-family: var(--fonte-corpo); transition: all .15s;
+    }
+    .pag-btn:hover:not(:disabled) { border-color: var(--cor-primaria); color: var(--cor-primaria); }
+    .pag-btn.active { background: var(--cor-primaria); border-color: var(--cor-primaria); color: #fff; }
+    .pag-btn:disabled { opacity: .35; cursor: not-allowed; }
+    .pag-btn.prev, .pag-btn.next { font-size: .9rem; }
 
     /* ===== BADGES ===== */
     .badge { padding: 3px 10px; border-radius: 20px; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; }
@@ -246,14 +273,15 @@
       display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: start;
     }
     .ag-card:last-child { border-bottom: none; }
-    .ag-hora-bloco { display: flex; flex-direction: column; align-items: center; gap: 2px; padding-top: 2px; }
-    .ag-hora { font-size: 1.15rem; font-weight: 800; color: var(--cor-primaria); line-height: 1; white-space: nowrap; }
-    .ag-data-mob  { font-size: .7rem; font-weight: 700; color: #667C85; white-space: nowrap; }
+    .ag-hora-bloco { display: flex; flex-direction: column; align-items: center; gap: 2px; padding-top: 2px; min-width: 48px; }
+    .ag-hora { font-size: 1.1rem; font-weight: 800; color: var(--cor-primaria); line-height: 1; white-space: nowrap; }
+    .ag-data-mob  { font-size: .68rem; font-weight: 700; color: #667C85; white-space: nowrap; }
     .ag-info .ag-cliente  { font-weight: 700; font-size: .92rem; color: #222; }
-    .ag-info .ag-detalhe  { font-size: .8rem; color: #667C85; margin-top: 2px; }
-    .ag-info .ag-protocolo { font-size: .72rem; color: #aaa; font-family: monospace; margin-top: 4px; }
+    .ag-info .ag-detalhe  { font-size: .78rem; color: #667C85; margin-top: 2px; }
+    .ag-info .ag-protocolo { font-size: .7rem; color: #aaa; font-family: monospace; margin-top: 4px; }
     .ag-info .ag-preco     { font-size: .82rem; font-weight: 700; color: #1e7e4a; margin-top: 3px; }
-    .ag-status { padding-top: 2px; }
+    .ag-info .ag-wa        { margin-top: 5px; }
+    .ag-status { padding-top: 2px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
 
     /* ===== SEÇÕES CRUD ===== */
     .section-card {
@@ -411,6 +439,11 @@
     .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
     /* ===== RESPONSIVIDADE ===== */
+    @media (max-width: 860px) {
+      .container { padding: 0 12px; }
+      table { font-size: .82rem; }
+      th, td { padding: 9px 10px; }
+    }
     @media (max-width: 640px) {
       body { padding-bottom: 24px; }
       .filter-grid { grid-template-columns: 1fr 1fr; }
@@ -418,6 +451,11 @@
       .summary-row { grid-template-columns: repeat(2, 1fr); }
       .agenda-card.tem-dados .table-scroll { display: none; }
       .agenda-card.tem-dados .agenda-list  { display: block; }
+      .paginacao { padding: 10px 12px; }
+      .pag-info { font-size: .75rem; }
+      .pag-btn  { min-width: 30px; height: 30px; font-size: .78rem; }
+      .section-card { padding: 14px; }
+      .form-row { grid-template-columns: 1fr; }
     }
     @media (max-width: 400px) {
       .filter-grid { grid-template-columns: 1fr; }
@@ -550,7 +588,7 @@
               <thead>
                 <tr>
                   <th>Data</th><th>Hora</th><th>Cliente</th><th>Telefone</th>
-                  <th>Serviço</th><th>Prestador</th><th>Valor</th><th>Status</th><th>Protocolo</th><th></th>
+                  <th>Serviço</th><th>Prestador</th><th>Valor</th><th>Status</th><th>WhatsApp</th><th>Protocolo</th><th></th>
                 </tr>
               </thead>
               <tbody id="agendaBody"></tbody>
@@ -559,6 +597,10 @@
           <div class="agenda-list" id="agendaList"></div>
           <div id="agendaEmpty">
             <div class="loading-state">⏳ Carregando agenda...</div>
+          </div>
+          <div class="paginacao" id="paginacaoBar" style="display:none">
+            <span class="pag-info" id="paginacaoInfo"></span>
+            <div class="pag-btns" id="paginacaoBtns"></div>
           </div>
         </div>
 
@@ -792,11 +834,14 @@
     let NICHO_ID       = null;
     let CURRENT_USER   = null;
 
-    let servicosCache    = [];
-    let prestadoresCache = [];
+    let servicosCache     = [];
+    let prestadoresCache  = [];
     let agendamentosCache = [];
-    let editandoId       = null;
-    let _dispDiasCache   = {};
+    let _allAgendamentos  = [];
+    let _currentPage      = 1;
+    const PAGE_SIZE       = 15;
+    let editandoId        = null;
+    let _dispDiasCache    = {};
     let _dispPrestAtual  = null;
     let _waPollInterval  = null;
     let _waStatus        = 'desconectado';
@@ -1100,6 +1145,8 @@
       document.getElementById('agendaTotalValor').style.display = 'none';
       document.getElementById('scTotal').textContent = '...';
       document.getElementById('scValor').textContent  = '...';
+      document.getElementById('paginacaoBar').style.display = 'none';
+      _allAgendamentos = [];
 
       let url = `/booking?negocioId=${encodeURIComponent(NEGOCIO_ID)}&`;
       if (NICHO_ID)       url += `nichoId=${encodeURIComponent(NICHO_ID)}&`;
@@ -1148,65 +1195,16 @@
           document.getElementById('agendaEmpty').innerHTML =
             '<div class="empty-state"><div class="empty-icon">📅</div><p>Nenhum agendamento encontrado.</p></div>';
           document.getElementById('agendaEmpty').style.display = 'block';
+          document.getElementById('paginacaoBar').style.display = 'none';
           return;
         }
 
         agendamentosCache = agendamentos;
-
-        // Tabela desktop
-        const tbody = document.getElementById('agendaBody');
-        tbody.innerHTML = '';
-        agendamentos.forEach(ag => {
-          const svc   = esc(ag.servicoNome  || servicosMap[ag.servico_id]?.nome || ag.servico_id);
-          const prest = esc(ag.prestadorNome || prestadoresMap[ag.prestador_id]);
-          const preco = resolverPreco(ag);
-          tbody.insertAdjacentHTML('beforeend', `
-            <tr>
-              <td class="hora-cell">${formatarData(ag.data_hora)}</td>
-              <td class="hora-cell">${formatarHora(ag.data_hora)}</td>
-              <td><strong>${esc(ag.cliente_nome)}</strong></td>
-              <td>${esc(ag.cliente_telefone)}</td>
-              <td>${svc}</td>
-              <td>${prest}</td>
-              <td class="preco-cell">${preco != null ? formatarPreco(preco) : '—'}</td>
-              <td>${badgeStatus(ag.status)}</td>
-              <td class="protocolo-cell">${esc(ag.protocolo)}</td>
-              <td><button class="btn-editar" data-id="${ag.id}">✏️ Editar</button></td>
-            </tr>`);
-        });
-        tbody.onclick = e => { const b = e.target.closest('[data-id]'); if (b) abrirModal(b.dataset.id); };
-
-        // Cards mobile
-        const list = document.getElementById('agendaList');
-        list.innerHTML = '';
-        agendamentos.forEach(ag => {
-          const svc  = esc(ag.servicoNome  || servicosMap[ag.servico_id]?.nome || ag.servico_id);
-          const prest= esc(ag.prestadorNome || prestadoresMap[ag.prestador_id]);
-          const preco= resolverPreco(ag);
-          const div  = document.createElement('div');
-          div.className = 'ag-card';
-          div.innerHTML = `
-            <div class="ag-hora-bloco">
-              <div class="ag-hora">${formatarHora(ag.data_hora)}</div>
-              <div class="ag-data-mob">${formatarData(ag.data_hora)}</div>
-            </div>
-            <div class="ag-info">
-              <div class="ag-cliente">${esc(ag.cliente_nome)}</div>
-              <div class="ag-detalhe">🔧 ${svc} · 👤 ${prest}</div>
-              <div class="ag-detalhe">📞 ${esc(ag.cliente_telefone)}</div>
-              ${preco != null ? `<div class="ag-preco">💰 ${formatarPreco(preco)}</div>` : ''}
-              <div class="ag-protocolo">${esc(ag.protocolo)}</div>
-            </div>
-            <div class="ag-status" style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-              ${badgeStatus(ag.status)}
-              <button class="btn-editar" data-id="${ag.id}">✏️</button>
-            </div>`;
-          list.appendChild(div);
-        });
-        list.onclick = e => { const b = e.target.closest('[data-id]'); if (b) abrirModal(b.dataset.id); };
+        _allAgendamentos  = agendamentos;
 
         document.querySelector('.agenda-card').classList.add('tem-dados');
         document.getElementById('agendaEmpty').style.display = 'none';
+        renderPagina(1, servicosMap, prestadoresMap, resolverPreco);
 
       } catch (e) {
         document.querySelector('.agenda-card').classList.remove('tem-dados');
@@ -1214,7 +1212,126 @@
           `<div class="empty-state"><div class="empty-icon">❌</div><p>${e.message || 'Erro ao buscar agendamentos.'}</p></div>`;
         document.getElementById('agendaEmpty').style.display = 'block';
         document.getElementById('agendaCount').textContent = 'Erro';
+        document.getElementById('paginacaoBar').style.display = 'none';
       }
+    }
+
+    // ============================================================
+    // PAGINAÇÃO
+    // ============================================================
+    function waLink(telefone) {
+      const num = (telefone || '').replace(/\D/g, '');
+      if (num.length < 10) return `<span class="wa-link sem">📱 —</span>`;
+      const waNum = num.startsWith('55') ? num : `55${num}`;
+      return `<a class="wa-link" href="https://wa.me/${waNum}" target="_blank" rel="noopener">📱 WhatsApp</a>`;
+    }
+
+    function renderPagina(page, servicosMap, prestadoresMap, resolverPreco) {
+      _currentPage = page;
+      const total  = _allAgendamentos.length;
+      const pages  = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      page = Math.min(Math.max(1, page), pages);
+
+      const inicio = (page - 1) * PAGE_SIZE;
+      const slice  = _allAgendamentos.slice(inicio, inicio + PAGE_SIZE);
+
+      // ── Tabela desktop ──
+      const tbody = document.getElementById('agendaBody');
+      tbody.innerHTML = '';
+      slice.forEach(ag => {
+        const svc   = esc(ag.servicoNome  || servicosMap[ag.servico_id]?.nome || ag.servico_id);
+        const prest = esc(ag.prestadorNome || prestadoresMap[ag.prestador_id] || '—');
+        const preco = resolverPreco(ag);
+        tbody.insertAdjacentHTML('beforeend', `
+          <tr>
+            <td class="hora-cell">${formatarData(ag.data_hora)}</td>
+            <td class="hora-cell">${formatarHora(ag.data_hora)}</td>
+            <td><strong>${esc(ag.cliente_nome)}</strong></td>
+            <td>${esc(ag.cliente_telefone)}</td>
+            <td>${svc}</td>
+            <td>${prest}</td>
+            <td class="preco-cell">${preco != null ? formatarPreco(preco) : '—'}</td>
+            <td>${badgeStatus(ag.status)}</td>
+            <td class="wa-cell">${waLink(ag.cliente_telefone)}</td>
+            <td class="protocolo-cell">${esc(ag.protocolo)}</td>
+            <td><button class="btn-editar" data-id="${ag.id}">✏️ Editar</button></td>
+          </tr>`);
+      });
+      tbody.onclick = e => { const b = e.target.closest('[data-id]'); if (b) abrirModal(b.dataset.id); };
+
+      // ── Cards mobile ──
+      const list = document.getElementById('agendaList');
+      list.innerHTML = '';
+      slice.forEach(ag => {
+        const svc  = esc(ag.servicoNome  || servicosMap[ag.servico_id]?.nome || ag.servico_id);
+        const prest= esc(ag.prestadorNome || prestadoresMap[ag.prestador_id] || '—');
+        const preco= resolverPreco(ag);
+        const div  = document.createElement('div');
+        div.className = 'ag-card';
+        div.innerHTML = `
+          <div class="ag-hora-bloco">
+            <div class="ag-hora">${formatarHora(ag.data_hora)}</div>
+            <div class="ag-data-mob">${formatarData(ag.data_hora)}</div>
+          </div>
+          <div class="ag-info">
+            <div class="ag-cliente">${esc(ag.cliente_nome)}</div>
+            <div class="ag-detalhe">✂️ ${svc}</div>
+            <div class="ag-detalhe">👤 ${prest}</div>
+            <div class="ag-detalhe">📞 ${esc(ag.cliente_telefone)}</div>
+            ${preco != null ? `<div class="ag-preco">💰 ${formatarPreco(preco)}</div>` : ''}
+            <div class="ag-wa">${waLink(ag.cliente_telefone)}</div>
+            <div class="ag-protocolo">${esc(ag.protocolo)}</div>
+          </div>
+          <div class="ag-status">
+            ${badgeStatus(ag.status)}
+            <button class="btn-editar" data-id="${ag.id}">✏️</button>
+          </div>`;
+        list.appendChild(div);
+      });
+      list.onclick = e => { const b = e.target.closest('[data-id]'); if (b) abrirModal(b.dataset.id); };
+
+      renderPaginacao(page, pages, total, inicio, servicosMap, prestadoresMap, resolverPreco);
+    }
+
+    function renderPaginacao(page, pages, total, inicio, sM, pM, rP) {
+      const bar  = document.getElementById('paginacaoBar');
+      const info = document.getElementById('paginacaoInfo');
+      const btns = document.getElementById('paginacaoBtns');
+
+      if (pages <= 1) { bar.style.display = 'none'; return; }
+      bar.style.display = 'flex';
+
+      const fim = Math.min(inicio + PAGE_SIZE, total);
+      info.textContent = `${inicio + 1}–${fim} de ${total}`;
+
+      // Calcula janela de páginas visíveis
+      const MAX_VISIBLE = 5;
+      let start = Math.max(1, page - 2);
+      let end   = Math.min(pages, start + MAX_VISIBLE - 1);
+      if (end - start < MAX_VISIBLE - 1) start = Math.max(1, end - MAX_VISIBLE + 1);
+
+      let html = `<button class="pag-btn prev" ${page <= 1 ? 'disabled' : ''} onclick="irPagina(${page-1})">‹</button>`;
+      if (start > 1) html += `<button class="pag-btn" onclick="irPagina(1)">1</button>${start > 2 ? '<span style="padding:0 4px;color:#aaa">…</span>' : ''}`;
+      for (let i = start; i <= end; i++) {
+        html += `<button class="pag-btn${i===page?' active':''}" onclick="irPagina(${i})">${i}</button>`;
+      }
+      if (end < pages) html += `${end < pages - 1 ? '<span style="padding:0 4px;color:#aaa">…</span>' : ''}<button class="pag-btn" onclick="irPagina(${pages})">${pages}</button>`;
+      html += `<button class="pag-btn next" ${page >= pages ? 'disabled' : ''} onclick="irPagina(${page+1})">›</button>`;
+      btns.innerHTML = html;
+    }
+
+    function irPagina(page) {
+      if (!_allAgendamentos.length) return;
+      const servicosMap    = servicosCache.reduce((m, s) => { m[s.id] = s; return m; }, {});
+      const prestadoresMap = prestadoresCache.reduce((m, p) => { m[p.id] = p.nome; return m; }, {});
+      function resolverPreco(ag) {
+        if (ag.servicoPreco != null) return Number(ag.servicoPreco);
+        const cached = servicosMap[ag.servico_id];
+        if (cached?.preco != null) return Number(cached.preco);
+        return null;
+      }
+      renderPagina(page, servicosMap, prestadoresMap, resolverPreco);
+      document.querySelector('.agenda-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     // ============================================================
