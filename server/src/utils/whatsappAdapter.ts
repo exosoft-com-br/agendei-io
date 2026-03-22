@@ -60,9 +60,11 @@ export class EvolutionAPIProvider implements WhatsAppProvider {
   }
 
   async sendMessage(para: string, texto: string): Promise<void> {
+    const digits = para.replace(/\D/g, "");
+    const number = digits.startsWith("55") ? digits : `55${digits}`;
     await axios.post(
       `${this.apiUrl}/message/sendText/${this.instanceName}`,
-      { number: para, text: texto },
+      { number, text: texto },
       { headers: { "Content-Type": "application/json", apikey: this.apiToken } }
     );
   }
