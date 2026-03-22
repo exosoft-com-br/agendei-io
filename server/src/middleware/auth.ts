@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || "plataforma-agendamentos-secret-key-2024";
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error("FATAL: JWT_SECRET não definido. Configure a variável de ambiente.");
+  process.exit(1);
+}
 
 export interface AuthPayload {
   userId: string;
@@ -23,7 +27,7 @@ declare global {
  * Gera um JWT com payload do usuário.
  */
 export function gerarToken(payload: AuthPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "24h" });
+  return jwt.sign(payload, JWT_SECRET!, { expiresIn: "24h" });
 }
 
 /**
@@ -38,7 +42,7 @@ export function autenticar(req: Request, res: Response, next: NextFunction): voi
 
   try {
     const token = header.split(" ")[1];
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthPayload;
+    const decoded = jwt.verify(token, JWT_SECRET!) as AuthPayload;
     req.auth = decoded;
     next();
   } catch {

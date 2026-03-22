@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redefinir senha — agendei.io</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Montserrat', system-ui, sans-serif;
+      background: linear-gradient(135deg, #00A8C6 0%, #004D61 100%);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    .card {
+      background: #fff; border-radius: 20px; padding: 36px 32px;
+      width: 100%; max-width: 400px; box-shadow: 0 24px 64px rgba(0,0,0,.3);
+    }
+    .brand { text-align: center; margin-bottom: 28px; }
+    .brand .icon {
+      width: 52px; height: 52px; border-radius: 12px;
+      background: linear-gradient(135deg, #00A8C6, #004D61);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; margin-bottom: 10px;
+    }
+    .brand h2 { font-size: 1.2rem; font-weight: 800; color: #222; }
+    .brand p  { font-size: .82rem; color: #667C85; margin-top: 4px; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: .72rem; font-weight: 700; color: #667C85; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
+    .field input {
+      width: 100%; padding: 10px 14px; border: 2px solid #dde4e8; border-radius: 10px;
+      font-size: .92rem; font-family: inherit; color: #222;
+    }
+    .field input:focus { outline: none; border-color: #00A8C6; box-shadow: 0 0 0 3px rgba(0,168,198,.14); }
+    .btn {
+      width: 100%; padding: 12px; background: #00A8C6; color: #fff;
+      border: none; border-radius: 10px; font-size: .95rem; font-weight: 700; cursor: pointer;
+      font-family: inherit; margin-top: 4px;
+    }
+    .btn:hover { opacity: .9; }
+    .btn:disabled { opacity: .6; cursor: not-allowed; }
+    .msg { margin-top: 12px; font-size: .84rem; text-align: center; min-height: 20px; }
+    .msg.erro    { color: #c62828; }
+    .msg.sucesso { color: #1e7e4a; }
+    #panelForgot, #panelReset, #panelOk { display: none; }
+    #panelForgot.active, #panelReset.active, #panelOk.active { display: block; }
+    .link { color: #00A8C6; font-size: .84rem; text-decoration: none; display: block; text-align: center; margin-top: 14px; }
+    .link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand">
+      <div class="icon">🔐</div>
+      <h2>agendei.io</h2>
+      <p id="panelSubtitulo">Recuperação de senha</p>
+    </div>
+
+    <!-- Painel 1: solicitar reset -->
+    <div id="panelForgot" class="active">
+      <div class="field">
+        <label>E-mail cadastrado</label>
+        <input type="email" id="emailInput" placeholder="seu@email.com" autocomplete="email">
+      </div>
+      <button class="btn" id="btnEnviar" onclick="solicitarReset()">Enviar link de recuperação</button>
+      <div class="msg" id="msgForgot"></div>
+      <a href="painel.html" class="link">← Voltar ao login</a>
+    </div>
+
+    <!-- Painel 2: nova senha -->
+    <div id="panelReset">
+      <div class="field">
+        <label>Nova senha (mínimo 8 caracteres)</label>
+        <input type="password" id="senhaInput" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label>Confirmar nova senha</label>
+        <input type="password" id="senhaConfirm" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <button class="btn" id="btnSalvar" onclick="salvarSenha()">Salvar nova senha</button>
+      <div class="msg" id="msgReset"></div>
+    </div>
+
+    <!-- Painel 3: confirmação -->
+    <div id="panelOk">
+      <p style="text-align:center;font-size:2.5rem;margin-bottom:12px">✅</p>
+      <p style="text-align:center;font-weight:700;color:#1e7e4a">Senha redefinida com sucesso!</p>
+      <a href="painel.html" class="link" style="margin-top:20px">Ir para o login</a>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'https://plataforma-agendamentos-api.onrender.com';
+    const token = new URLSearchParams(window.location.search).get('token');
+
+    // Se veio com token na URL → mostra painel de nova senha
+    if (token) {
+      document.getElementById('panelForgot').classList.remove('active');
+      document.getElementById('panelReset').classList.add('active');
+      document.getElementById('panelSubtitulo').textContent = 'Defina sua nova senha';
+    }
+
+    async function solicitarReset() {
+      const email = document.getElementById('emailInput').value.trim();
+      const msg   = document.getElementById('msgForgot');
+      const btn   = document.getElementById('btnEnviar');
+      msg.className = 'msg'; msg.textContent = '';
+      if (!email) { msg.className = 'msg erro'; msg.textContent = 'Informe seu e-mail.'; return; }
+      btn.disabled = true; btn.textContent = 'Enviando...';
+      try {
+        await fetch(`${API_URL}/api/auth/esqueci-senha`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        msg.className = 'msg sucesso';
+        msg.textContent = 'Se este e-mail estiver cadastrado, você receberá um link em breve.';
+      } catch {
+        msg.className = 'msg erro'; msg.textContent = 'Erro de conexão. Tente novamente.';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Enviar link de recuperação';
+      }
+    }
+
+    async function salvarSenha() {
+      const senha   = document.getElementById('senhaInput').value;
+      const confirm = document.getElementById('senhaConfirm').value;
+      const msg     = document.getElementById('msgReset');
+      const btn     = document.getElementById('btnSalvar');
+      msg.className = 'msg'; msg.textContent = '';
+      if (senha.length < 8) { msg.className = 'msg erro'; msg.textContent = 'Senha mínima: 8 caracteres.'; return; }
+      if (senha !== confirm) { msg.className = 'msg erro'; msg.textContent = 'As senhas não coincidem.'; return; }
+      btn.disabled = true; btn.textContent = 'Salvando...';
+      try {
+        const r = await fetch(`${API_URL}/api/auth/resetar-senha`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, senha }),
+        });
+        const d = await r.json();
+        if (!r.ok) { msg.className = 'msg erro'; msg.textContent = d.erro || 'Erro ao redefinir senha.'; return; }
+        document.getElementById('panelReset').classList.remove('active');
+        document.getElementById('panelOk').classList.add('active');
+      } catch {
+        msg.className = 'msg erro'; msg.textContent = 'Erro de conexão. Tente novamente.';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Salvar nova senha';
+      }
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      if (document.getElementById('panelForgot').classList.contains('active')) solicitarReset();
+      else if (document.getElementById('panelReset').classList.contains('active')) salvarSenha();
+    });
+  </script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { supabase } from "../supabaseClient";
 import { sanitizar, sanitizarId } from "../utils/sanitizar";
+import { autenticar } from "../middleware/auth";
 
 export const negocioRouter = Router();
 
@@ -15,9 +16,15 @@ function isCorHex(cor: string): boolean {
  * POST /api/negocios
  * Cadastra um novo negócio para o dono.
  */
-negocioRouter.post("/negocios", async (req: Request, res: Response) => {
+negocioRouter.post("/negocios", autenticar, async (req: Request, res: Response) => {
   try {
     const ownerId = sanitizarId(req.body.ownerId);
+
+    // Garante que só cria negócio para si mesmo
+    if (ownerId !== req.auth!.userId) {
+      res.status(403).json({ erro: "Você só pode criar negócios para sua própria conta." });
+      return;
+    }
     const nichoId = sanitizarId(req.body.nichoId);
     const nomeFantasia = sanitizar(req.body.nomeFantasia || "");
     const descricao = sanitizar(req.body.descricao || "");
@@ -284,11 +291,23 @@ negocioRouter.put("/negocios/:negocioId", async (req: Request, res: Response) =>
  * Exclui um negócio (e suas personalizações em cascata).
  * Acesso: apenas admin (verificado pelo frontend via JWT role).
  */
-negocioRouter.delete("/negocios/:negocioId", async (req: Request, res: Response) => {
+negocioRouter.delete("/negocios/:negocioId", autenticar, async (req: Request, res: Response) => {
   try {
     const negocioId = sanitizarId(req.params.negocioId);
     if (!negocioId) {
       res.status(400).json({ erro: "negocioId inválido." });
+      return;
+    }
+
+    // Verifica que o negócio pertence ao usuário autenticado
+    const { data: negocio } = await supabase
+      .from("negocios")
+      .select("owner_id")
+      .eq("id", negocioId)
+      .single();
+
+    if (!negocio || negocio.owner_id !== req.auth!.userId) {
+      res.status(403).json({ erro: "Acesso negado." });
       return;
     }
 

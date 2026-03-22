@@ -30,15 +30,23 @@ const PORT = process.env.PORT || 3000;
 // ============================================================
 // SEGURANÇA: CORS — restringir origens permitidas
 // ============================================================
-const allowedOrigins = [
+const isDev = process.env.NODE_ENV !== "production";
+
+const allowedOrigins: string[] = [
   "https://agendei.io",                        // Domínio principal
   "https://www.agendei.io",                    // www
   "https://app.agendei.io.exosoft.com.br",    // CNAME legado
-  "http://localhost:3000",                     // Dev local
-  "http://localhost:5500",                     // Live Server (VS Code)
-  "http://127.0.0.1:5500",
-  "http://localhost:8080",
 ];
+
+// Dev local — apenas em ambiente de desenvolvimento
+if (isDev) {
+  allowedOrigins.push(
+    "http://localhost:3000",
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "http://localhost:8080",
+  );
+}
 
 // Adicionar origens extras via env (ALLOWED_ORIGINS=url1,url2)
 if (process.env.ALLOWED_ORIGINS) {

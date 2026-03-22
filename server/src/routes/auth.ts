@@ -1,8 +1,42 @@
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import nodemailer from "nodemailer";
 import { supabase } from "../supabaseClient";
 import { sanitizar } from "../utils/sanitizar";
 import { gerarToken, autenticar, apenasAdmin, AuthPayload } from "../middleware/auth";
+
+// ── Mailer ───────────────────────────────────────────────────────────────────
+const mailer = nodemailer.createTransport({
+  host:   process.env.SMTP_HOST   || "smtp.gmail.com",
+  port:   Number(process.env.SMTP_PORT) || 465,
+  secure: (process.env.SMTP_SECURE ?? "true") === "true",
+  auth: {
+    user: process.env.SMTP_USER || "",
+    pass: process.env.SMTP_PASS || "",
+  },
+});
+
+async function enviarEmailResetSenha(email: string, nome: string, token: string) {
+  const link = `${process.env.APP_URL || "https://agendei.io"}/docs/resetar-senha.html?token=${token}`;
+  await mailer.sendMail({
+    from: `"agendei.io" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+    to: email,
+    subject: "Redefinição de senha — agendei.io",
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+        <h2 style="color:#00A8C6">agendei.io</h2>
+        <p>Olá, <strong>${nome}</strong>.</p>
+        <p>Recebemos uma solicitação para redefinir a senha da sua conta.</p>
+        <p style="margin:24px 0">
+          <a href="${link}" style="background:#00A8C6;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">
+            Redefinir senha
+          </a>
+        </p>
+        <p style="font-size:13px;color:#888">O link expira em <strong>1 hora</strong>. Se não solicitou, ignore este e-mail.</p>
+      </div>`,
+  });
+}
 
 export const authRouter = Router();
 
@@ -126,8 +160,8 @@ authRouter.post("/auth/register", async (req: Request, res: Response) => {
       res.status(400).json({ erro: "Email, senha e nome são obrigatórios." });
       return;
     }
-    if (senha.length < 6) {
-      res.status(400).json({ erro: "Senha deve ter pelo menos 6 caracteres." });
+    if (senha.length < 8) {
+      res.status(400).json({ erro: "Senha deve ter pelo menos 8 caracteres." });
       return;
     }
     if (!["admin", "usuario"].includes(role)) {
@@ -149,10 +183,10 @@ authRouter.post("/auth/register", async (req: Request, res: Response) => {
         res.status(401).json({ erro: "Apenas administradores podem criar novos usuários." });
         return;
       }
-      const jwt = await import("jsonwebtoken");
-      const JWT_SECRET = process.env.JWT_SECRET || "plataforma-agendamentos-secret-key-2024";
+      const jwtLib = await import("jsonwebtoken");
+      const secret = process.env.JWT_SECRET!;
       try {
-        const decoded = jwt.default.verify(header.split(" ")[1], JWT_SECRET) as AuthPayload;
+        const decoded = jwtLib.default.verify(header.split(" ")[1], secret) as AuthPayload;
         if (decoded.role !== "admin") {
           res.status(403).json({ erro: "Apenas administradores podem criar novos usuários." });
           return;
@@ -459,8 +493,8 @@ authRouter.post("/auth/usuarios", autenticar, apenasAdmin, async (req: Request, 
       res.status(400).json({ erro: "Email, senha e nome são obrigatórios." });
       return;
     }
-    if (senha.length < 6) {
-      res.status(400).json({ erro: "Senha mínima: 6 caracteres." });
+    if (senha.length < 8) {
+      res.status(400).json({ erro: "Senha mínima: 8 caracteres." });
       return;
     }
 
@@ -621,4 +655,117 @@ authRouter.get("/auth/oauth-config", async (_req: Request, res: Response) => {
     googleClientId: process.env.GOOGLE_CLIENT_ID || null,
     facebookAppId: process.env.FACEBOOK_APP_ID || null,
   });
+});
+
+// ============================================================
+// POST /api/auth/esqueci-senha
+// Gera token e envia e-mail para redefinição de senha
+// ============================================================
+authRouter.post("/auth/esqueci-senha", async (req: Request, res: Response) => {
+  // Sempre retorna 200 para não expor se e-mail existe
+  const resposta = { sucesso: true, mensagem: "Se este e-mail estiver cadastrado, você receberá um link em breve." };
+  try {
+    const email = ((req.body.email as string) || "").trim().toLowerCase();
+    if (!email) { res.json(resposta); return; }
+
+    const { data: user } = await supabase
+      .from("usuarios")
+      .select("id, nome, email")
+      .eq("email", email)
+      .single();
+
+    if (!user) { res.json(resposta); return; }
+
+    // Gera token seguro
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const expiraEm  = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1h
+
+    // Remove tokens anteriores do mesmo usuário
+    await supabase.from("password_reset_tokens").delete().eq("user_id", user.id);
+
+    await supabase.from("password_reset_tokens").insert({
+      user_id:   user.id,
+      token_hash: tokenHash,
+      expira_em:  expiraEm,
+    });
+
+    if (process.env.SMTP_USER) {
+      await enviarEmailResetSenha(user.email, user.nome || "Usuário", rawToken).catch(e =>
+        console.error("[auth] Erro ao enviar e-mail de reset:", e?.message)
+      );
+    } else {
+      console.warn("[auth] SMTP não configurado — token de reset gerado mas e-mail não enviado.");
+    }
+
+    res.json(resposta);
+  } catch (e) {
+    console.error("[auth] Erro em esqueci-senha:", e);
+    res.json(resposta);
+  }
+});
+
+// ============================================================
+// POST /api/auth/resetar-senha
+// Valida token e atualiza senha
+// ============================================================
+authRouter.post("/auth/resetar-senha", async (req: Request, res: Response) => {
+  try {
+    const rawToken = (req.body.token as string) || "";
+    const novaSenha = (req.body.senha as string) || "";
+
+    if (!rawToken || novaSenha.length < 8) {
+      res.status(400).json({ erro: "Token inválido ou senha muito curta (mínimo 8 caracteres)." });
+      return;
+    }
+
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+    const { data: tokenRow } = await supabase
+      .from("password_reset_tokens")
+      .select("*")
+      .eq("token_hash", tokenHash)
+      .eq("usado", false)
+      .gt("expira_em", new Date().toISOString())
+      .single();
+
+    if (!tokenRow) {
+      res.status(400).json({ erro: "Token inválido ou expirado." });
+      return;
+    }
+
+    const senhaHash = await bcrypt.hash(novaSenha, 12);
+
+    await supabase.from("usuarios").update({ senha_hash: senhaHash }).eq("id", tokenRow.user_id);
+    await supabase.from("password_reset_tokens").update({ usado: true }).eq("id", tokenRow.id);
+
+    res.json({ sucesso: true, mensagem: "Senha redefinida com sucesso." });
+  } catch (e) {
+    console.error("[auth] Erro em resetar-senha:", e);
+    res.status(500).json({ erro: "Erro interno." });
+  }
+});
+
+// ============================================================
+// POST /api/auth/refresh
+// Renova token JWT por mais 24h se o atual ainda for válido
+// ============================================================
+authRouter.post("/auth/refresh", autenticar, async (req: Request, res: Response) => {
+  try {
+    const { data: user } = await supabase
+      .from("usuarios")
+      .select("id, email, nome, role, owner_id, negocio_id, whatsapp_ativo, perm_prestadores, perm_servicos, perm_agenda, avatar_url, provedor, ativo")
+      .eq("id", req.auth!.userId)
+      .single();
+
+    if (!user || user.ativo === false) {
+      res.status(401).json({ erro: "Usuário inativo ou não encontrado." });
+      return;
+    }
+
+    res.json(gerarResposta(user));
+  } catch (e) {
+    console.error("[auth] Erro ao renovar token:", e);
+    res.status(500).json({ erro: "Erro interno." });
+  }
 });

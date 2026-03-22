@@ -36,11 +36,63 @@ interface WInstance {
 
 class BaileysManager {
   private instances = new Map<string, WInstance>();
-  private readonly sessionsDir = "/tmp/wa-sessions";
+  // WA_SESSIONS_PATH pode apontar para um disco persistente no Render (plano pago)
+  // Se não definido, usa /tmp (sessões perdidas no restart)
+  private readonly sessionsDir = process.env.WA_SESSIONS_PATH || "/tmp/wa-sessions";
 
   constructor() {
     if (!fs.existsSync(this.sessionsDir)) {
       fs.mkdirSync(this.sessionsDir, { recursive: true });
+    }
+  }
+
+  /**
+   * Salva snapshot dos arquivos de sessão no Supabase (backup contra restart).
+   * Chamado após conexão bem-sucedida.
+   */
+  private async backupSessaoSupabase(negocioId: string): Promise<void> {
+    try {
+      const sessionDir = path.join(this.sessionsDir, negocioId);
+      if (!fs.existsSync(sessionDir)) return;
+      const arquivos: Record<string, string> = {};
+      for (const file of fs.readdirSync(sessionDir)) {
+        const filePath = path.join(sessionDir, file);
+        const stat = fs.statSync(filePath);
+        if (stat.isFile()) {
+          arquivos[file] = fs.readFileSync(filePath, "utf8");
+        }
+      }
+      if (!Object.keys(arquivos).length) return;
+      await supabase.from("whatsapp_sessions").upsert(
+        { negocio_id: negocioId, arquivos, atualizado_em: new Date().toISOString() },
+        { onConflict: "negocio_id" }
+      );
+    } catch (e) {
+      console.warn("[baileys] Falha ao fazer backup no Supabase:", e);
+    }
+  }
+
+  /**
+   * Restaura arquivos de sessão do Supabase para o disco local.
+   * Chamado no startup antes de tentar reconectar.
+   */
+  private async restaurarSessaoSupabase(negocioId: string): Promise<boolean> {
+    try {
+      const { data } = await supabase
+        .from("whatsapp_sessions")
+        .select("arquivos")
+        .eq("negocio_id", negocioId)
+        .single();
+      if (!data?.arquivos) return false;
+      const sessionDir = path.join(this.sessionsDir, negocioId);
+      fs.mkdirSync(sessionDir, { recursive: true });
+      for (const [file, content] of Object.entries(data.arquivos as Record<string, string>)) {
+        fs.writeFileSync(path.join(sessionDir, file), content, "utf8");
+      }
+      console.log(`[baileys] Sessão restaurada do Supabase para ${negocioId}`);
+      return true;
+    } catch {
+      return false;
     }
   }
 
@@ -67,14 +119,26 @@ class BaileysManager {
 
       for (const n of negocios) {
         const sessionDir = path.join(this.sessionsDir, n.id);
-        if (fs.existsSync(sessionDir) && fs.readdirSync(sessionDir).length > 0) {
-          console.log(`[baileys] Restaurando sessão do negócio ${n.id}...`);
+        const sessionDir = path.join(this.sessionsDir, n.id);
+        const temLocal = fs.existsSync(sessionDir) && fs.readdirSync(sessionDir).length > 0;
+
+        if (temLocal) {
+          console.log(`[baileys] Restaurando sessão local do negócio ${n.id}...`);
           this.connect(n.id).catch((e) =>
             console.error(`[baileys] Falha ao restaurar ${n.id}:`, e)
           );
         } else {
-          // Sessão sumiu (restart limpo) — marca como desconectado no banco
-          await this.updateStatus(n.id, "desconectado");
+          // Tenta restaurar do backup no Supabase (útil após restart no Render free tier)
+          const restaurado = await this.restaurarSessaoSupabase(n.id);
+          if (restaurado) {
+            console.log(`[baileys] Reconectando ${n.id} com sessão restaurada do Supabase...`);
+            this.connect(n.id).catch((e) =>
+              console.error(`[baileys] Falha ao reconectar ${n.id} via backup:`, e)
+            );
+          } else {
+            // Nenhuma sessão disponível — marca como desconectado
+            await this.updateStatus(n.id, "desconectado");
+          }
         }
       }
     } catch (e) {
@@ -178,6 +242,8 @@ class BaileysManager {
         instance.reconnectAttempts = 0;
         await this.updateStatus(negocioId, "conectado");
         console.log(`[baileys] ✅ Negócio ${negocioId} conectado ao WhatsApp`);
+        // Faz backup da sessão no Supabase para sobreviver a restarts
+        setTimeout(() => this.backupSessaoSupabase(negocioId).catch(() => {}), 3_000);
       }
     });
   }
@@ -193,6 +259,8 @@ class BaileysManager {
     if (fs.existsSync(sessionDir)) {
       fs.rmSync(sessionDir, { recursive: true, force: true });
     }
+    // Remove backup do Supabase
+    await supabase.from("whatsapp_sessions").delete().eq("negocio_id", negocioId).catch(() => {});
     await this.updateStatus(negocioId, "desconectado");
   }
 

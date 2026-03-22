@@ -210,7 +210,9 @@ pagamentoRouter.get("/pagamento/verificar/:agendamentoId", async (req: Request, 
 
 // ============================================================
 // POST /api/pagamento/confirmar/:agendamentoId
-// Cliente clica "Já Paguei" (modo manual — sem Inter API)
+// Cliente clica "Já Paguei".
+// Se negócio usa Inter: verifica pagamento real antes de confirmar.
+// Se modo manual: aceita diretamente (sem verificação bancária).
 // ============================================================
 pagamentoRouter.post("/pagamento/confirmar/:agendamentoId", async (req: Request, res: Response) => {
   const { agendamentoId } = req.params;
@@ -218,7 +220,7 @@ pagamentoRouter.post("/pagamento/confirmar/:agendamentoId", async (req: Request,
   try {
     const { data: ag } = await supabase
       .from("agendamentos")
-      .select("id, pagamento_status, pagamento_expira_em, protocolo")
+      .select("id, pagamento_status, pagamento_expira_em, pagamento_txid, nicho_id, protocolo")
       .eq("id", agendamentoId)
       .single();
 
@@ -230,6 +232,26 @@ pagamentoRouter.post("/pagamento/confirmar/:agendamentoId", async (req: Request,
     if (ag.pagamento_expira_em && new Date(ag.pagamento_expira_em) < new Date()) {
       res.status(400).json({ erro: "O PIX expirou. Faça um novo agendamento." });
       return;
+    }
+
+    // Se negócio tem Inter configurado: exige verificação real com o banco
+    if (ag.pagamento_txid) {
+      const creds = await buscarCredenciaisInter(ag.nicho_id);
+      if (creds) {
+        try {
+          const { pago } = await verificarPagamentoPix(creds, ag.pagamento_txid);
+          if (!pago) {
+            res.status(402).json({
+              erro: "Pagamento PIX ainda não foi identificado. Aguarde alguns instantes e tente novamente.",
+              pago: false,
+            });
+            return;
+          }
+        } catch (e: any) {
+          console.error("[pagamento] Erro ao verificar Inter em confirmar:", e?.message);
+          // Se a API do banco falhar, não bloqueia — deixa continuar para não prejudicar o cliente
+        }
+      }
     }
 
     processarPagamentoConfirmado(agendamentoId).catch(console.error);
