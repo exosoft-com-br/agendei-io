@@ -247,10 +247,10 @@
 
   <!-- Tabs -->
   <div class="tabs">
-    <button class="tab-btn active" onclick="ativarTab('agendamentos')">📋 Agendamentos</button>
-    <button class="tab-btn" onclick="ativarTab('prestadores')">👤 Prestadores</button>
-    <button class="tab-btn" onclick="ativarTab('servicos')">✂️ Serviços</button>
-    <button class="tab-btn" onclick="ativarTab('agenda')">📆 Agenda</button>
+    <button class="tab-btn active" data-tab="agendamentos" onclick="ativarTab('agendamentos')">📋 Agendamentos</button>
+    <button class="tab-btn" data-tab="prestadores"  onclick="ativarTab('prestadores')">👤 Prestadores</button>
+    <button class="tab-btn" data-tab="servicos"     onclick="ativarTab('servicos')">✂️ Serviços</button>
+    <button class="tab-btn" data-tab="agenda"       onclick="ativarTab('agenda')">📆 Agenda</button>
   </div>
 
   <!-- ══ Tab Agendamentos ══ -->
@@ -455,7 +455,7 @@
       <div id="agendaContent" style="display:none">
         <div class="section-header" style="margin-bottom:12px">
           <span style="font-size:13px;color:#666">Próximos 60 dias — clique em um dia para personalizar</span>
-          <button class="btn-novo" onclick="abrirModalDisponibilidade(null)">+ Adicionar data</button>
+          <button class="btn-novo" onclick="abrirModalNovaData()">+ Adicionar data</button>
         </div>
         <div class="dias-lista" id="diasLista"></div>
       </div>
@@ -546,7 +546,7 @@
 
   // ── Tabs ────────────────────────────────────────────────────
   function ativarTab(nome) {
-    document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', b.textContent.toLowerCase().includes(nome) || (nome === 'agendamentos' && i===0)));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === nome));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.getElementById(`tab-${nome}`).classList.add('active');
     if (nome === 'prestadores') carregarPrestadores();
@@ -911,6 +911,15 @@
   }
 
   // ── Agenda (disponibilidades) ────────────────────────────────
+  // Cache de dados do dia selecionado — evita passar dados via onclick string
+  let _agendaDiasCache = {};
+  let _agendaPrestadorAtual = null;
+
+  // Formata Date local → 'YYYY-MM-DD' sem virar UTC (corrige bug de fuso horário)
+  function isoLocal(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
   async function carregarPrestadoresParaAgenda() {
     if (_prestadoresCache.length) { atualizarSelectsPrestador(_prestadoresCache); return; }
     if (!NEGOCIO_NICHO) return;
@@ -925,78 +934,111 @@
     const prestadorId = document.getElementById('agendaPrestador').value;
     const content = document.getElementById('agendaContent');
     const vazio   = document.getElementById('agendaVazio');
-    if (!prestadorId) { content.style.display='none'; vazio.style.display='block'; vazio.textContent='Selecione um prestador para ver e configurar a agenda.'; return; }
+    if (!prestadorId) {
+      content.style.display = 'none';
+      vazio.style.display   = 'block';
+      vazio.textContent     = 'Selecione um prestador para ver e configurar a agenda.';
+      return;
+    }
 
-    const prestador = _prestadoresCache.find(p => p.id === prestadorId);
+    _agendaPrestadorAtual = _prestadoresCache.find(p => p.id === prestadorId) || null;
 
     try {
       const data = await apiFetch(`/disponibilidades?prestadorId=${prestadorId}`);
-      const dispMap = {};
-      (data.disponibilidades || []).forEach(d => { dispMap[d.data] = d; });
-      renderizarAgenda(prestador, dispMap);
+      _agendaDiasCache = {};
+      (data.disponibilidades || []).forEach(d => { _agendaDiasCache[d.data] = d; });
+      renderizarAgenda(_agendaPrestadorAtual, _agendaDiasCache);
       content.style.display = 'block';
       vazio.style.display   = 'none';
     } catch(e) { showAlert('error', e.message); }
   }
 
   function renderizarAgenda(prestador, dispMap) {
-    const DIAS = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+    const DIAS_SEMANA = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+    const DIAS_ABREV  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
     const lista = document.getElementById('diasLista');
     const hoje  = new Date();
-    const dias  = [];
+    const html  = [];
 
     for (let i = 0; i < 60; i++) {
-      const d = new Date(hoje);
-      d.setDate(hoje.getDate() + i);
-      const iso = d.toISOString().slice(0,10);
+      const d   = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + i);
+      const iso = isoLocal(d);  // ← sem bug de fuso
       const dow = d.getDay();
-      const disp = dispMap[iso];
+      const disp   = dispMap[iso];
       const padrao = (prestador?.diasSemana || [1,2,3,4,5]).includes(dow);
 
-      let status, statusClass, horario;
+      let status, statusClass, horarioTxt;
       if (disp) {
         if (!disp.disponivel) {
-          status = 'Bloqueado'; statusClass = 'dia-bloqueado'; horario = 'Sem atendimento';
+          status = 'Bloqueado'; statusClass = 'dia-bloqueado'; horarioTxt = 'Sem atendimento';
         } else {
           status = 'Personalizado'; statusClass = 'dia-custom';
-          horario = `${disp.horario_inicio||prestador?.horarioInicio||'08:00'} – ${disp.horario_fim||prestador?.horarioFim||'18:00'}`;
+          const ini = disp.horario_inicio || prestador?.horarioInicio || '08:00';
+          const fim = disp.horario_fim    || prestador?.horarioFim    || '18:00';
+          horarioTxt = `${ini} – ${fim}`;
         }
       } else if (padrao) {
         status = 'Padrão'; statusClass = 'dia-padrao';
-        horario = `${prestador?.horarioInicio||'08:00'} – ${prestador?.horarioFim||'18:00'}`;
+        horarioTxt = `${prestador?.horarioInicio||'08:00'} – ${prestador?.horarioFim||'18:00'}`;
       } else {
-        status = 'Folga'; statusClass = 'dia-bloqueado'; horario = 'Sem atendimento';
+        status = 'Folga'; statusClass = 'dia-bloqueado'; horarioTxt = 'Sem atendimento';
       }
 
-      const dataFmt = d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
-      const removeBtn = disp
-        ? `<button class="btn-remover" onclick="removerDisponibilidade('${disp.id}')">Remover</button>`
-        : '';
+      const dataFmt   = d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+      const obsTexto  = disp?.observacao ? `<div class="dia-nome" style="color:#888;font-size:11px">${disp.observacao}</div>` : '';
+      const removeBtn = disp ? `<button class="btn-remover" onclick="removerDisponibilidade('${disp.id}','${iso}')">Remover</button>` : '';
 
-      dias.push(`<div class="dia-card">
+      // dados passados via atributo data-iso, não via parâmetros no onclick
+      html.push(`<div class="dia-card">
         <div class="dia-info">
-          <div class="dia-data">${dataFmt} — ${DIAS[dow]}</div>
-          <div class="dia-nome">${disp?.observacao || ''}</div>
+          <div class="dia-data">${dataFmt} — ${DIAS_SEMANA[dow]}</div>
+          ${obsTexto}
         </div>
         <span class="dia-status ${statusClass}">${status}</span>
-        <span class="horario">${horario}</span>
-        <button class="btn-config" onclick="abrirModalDisponibilidade('${prestador?.id||''}','${iso}','${disp?.id||''}','${disp?.horario_inicio||''}','${disp?.horario_fim||''}',${disp ? disp.disponivel : true},'${disp?.observacao||''}')">⚙️ Configurar</button>
+        <span class="horario">${horarioTxt}</span>
+        <button class="btn-config" data-iso="${iso}" onclick="abrirModalPorIso(this.dataset.iso)">⚙️ Configurar</button>
         ${removeBtn}
       </div>`);
     }
-    lista.innerHTML = dias.join('');
+    lista.innerHTML = html.join('');
   }
 
-  function abrirModalDisponibilidade(prestadorId, data='', dispId='', inicio='', fim='', disponivel=true, obs='') {
-    const pid = prestadorId || document.getElementById('agendaPrestador').value;
-    document.getElementById('modalDispPrestadorId').value  = pid;
-    document.getElementById('modalDispId').value           = dispId;
-    document.getElementById('modalDispData').value         = data;
-    document.getElementById('modalDispInicio').value       = inicio || '08:00';
-    document.getElementById('modalDispFim').value          = fim    || '18:00';
-    document.getElementById('modalDispDisponivel').checked = disponivel;
-    document.getElementById('modalDispObs').value          = obs;
-    document.getElementById('modalDispTitulo').textContent = data ? `Configurar ${data}` : 'Adicionar data';
+  // Abre modal usando ISO — lê dados do cache, sem passar via parâmetros de string
+  function abrirModalPorIso(iso) {
+    const prestadorId = document.getElementById('agendaPrestador').value;
+    const prestador   = _agendaPrestadorAtual;
+    const disp        = _agendaDiasCache[iso];
+
+    document.getElementById('modalDispPrestadorId').value  = prestadorId;
+    document.getElementById('modalDispId').value           = disp?.id || '';
+    document.getElementById('modalDispData').value         = iso;
+    document.getElementById('modalDispDisponivel').checked = disp ? disp.disponivel : true;
+    document.getElementById('modalDispInicio').value       = disp?.horario_inicio || prestador?.horarioInicio || '08:00';
+    document.getElementById('modalDispFim').value          = disp?.horario_fim    || prestador?.horarioFim    || '18:00';
+    document.getElementById('modalDispObs').value          = disp?.observacao || '';
+
+    const [ano, mes, dia] = iso.split('-');
+    const d   = new Date(Number(ano), Number(mes)-1, Number(dia));
+    const DIAS = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+    document.getElementById('modalDispTitulo').textContent =
+      `${DIAS[d.getDay()]}, ${d.toLocaleDateString('pt-BR', {day:'2-digit', month:'long'})}`;
+
+    toggleHorarioModal();
+    document.getElementById('modalDisponibilidade').style.display = 'flex';
+  }
+
+  // Botão "+ Adicionar data" — abre modal sem data pré-selecionada
+  function abrirModalNovaData() {
+    const prestadorId = document.getElementById('agendaPrestador').value;
+    if (!prestadorId) { showAlert('error', 'Selecione um prestador primeiro.'); return; }
+    document.getElementById('modalDispPrestadorId').value  = prestadorId;
+    document.getElementById('modalDispId').value           = '';
+    document.getElementById('modalDispData').value         = '';
+    document.getElementById('modalDispDisponivel').checked = true;
+    document.getElementById('modalDispInicio').value       = _agendaPrestadorAtual?.horarioInicio || '08:00';
+    document.getElementById('modalDispFim').value          = _agendaPrestadorAtual?.horarioFim    || '18:00';
+    document.getElementById('modalDispObs').value          = '';
+    document.getElementById('modalDispTitulo').textContent = 'Adicionar data';
     toggleHorarioModal();
     document.getElementById('modalDisponibilidade').style.display = 'flex';
   }
@@ -1019,6 +1061,8 @@
     const obs         = document.getElementById('modalDispObs').value.trim() || null;
 
     if (!data) { showAlert('error', 'Selecione uma data.'); return; }
+    if (disponivel && (!inicio || !fim)) { showAlert('error', 'Informe o horário de início e fim.'); return; }
+    if (disponivel && inicio >= fim) { showAlert('error', 'Horário de início deve ser antes do fim.'); return; }
 
     try {
       await apiFetch('/disponibilidades', {
@@ -1031,12 +1075,14 @@
     } catch(e) { showAlert('error', e.message); }
   }
 
-  async function removerDisponibilidade(id) {
+  async function removerDisponibilidade(id, iso) {
     if (!confirm('Remover personalização? O dia voltará ao horário padrão.')) return;
     try {
       await apiFetch(`/disponibilidades/${id}`, { method:'DELETE' });
+      // Remove do cache local e re-renderiza sem nova requisição
+      delete _agendaDiasCache[iso];
+      renderizarAgenda(_agendaPrestadorAtual, _agendaDiasCache);
       showAlert('success', 'Personalização removida.');
-      carregarAgenda();
     } catch(e) { showAlert('error', e.message); }
   }
 
