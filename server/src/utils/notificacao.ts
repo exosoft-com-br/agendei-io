@@ -1,10 +1,10 @@
 import { criarProvedorWhatsApp, WhatsAppProvider } from "./whatsappAdapter";
 
-function obterProvedor(): WhatsAppProvider | null {
+function obterProvedor(instancia?: string): WhatsAppProvider | null {
   const apiUrl = process.env.WHATSAPP_API_URL;
   const apiToken = process.env.WHATSAPP_API_TOKEN;
   const providerType = process.env.WHATSAPP_PROVIDER || "evolution";
-  const instanceName = process.env.WHATSAPP_INSTANCE_NAME || "default";
+  const instanceName = instancia || process.env.WHATSAPP_INSTANCE_NAME || "default";
 
   if (!apiUrl || !apiToken) return null;
 
@@ -20,8 +20,9 @@ export async function notificarConfirmacao(params: {
   prestador: string;
   nicho: string;
   dataFormatada: string;
+  instancia?: string;
 }): Promise<void> {
-  const provedor = obterProvedor();
+  const provedor = obterProvedor(params.instancia);
   if (!provedor) return;
 
   const mensagem =
@@ -48,8 +49,9 @@ export async function notificarPrestadorNovoAgendamento(params: {
   clienteNome: string;
   servico: string;
   dataFormatada: string;
+  instancia?: string;
 }): Promise<void> {
-  const provedor = obterProvedor();
+  const provedor = obterProvedor(params.instancia);
   if (!provedor || !params.telefonePrestador) return;
 
   const mensagem =
@@ -75,8 +77,9 @@ export async function notificarLembreteCliente(params: {
   prestador: string;
   nicho: string;
   dataFormatada: string;
+  instancia?: string;
 }): Promise<void> {
-  const provedor = obterProvedor();
+  const provedor = obterProvedor(params.instancia);
   if (!provedor) return;
 
   const mensagem =
@@ -104,8 +107,9 @@ export async function notificarLembretePrestador(params: {
   servico: string;
   dataFormatada: string;
   protocolo: string;
+  instancia?: string;
 }): Promise<void> {
-  const provedor = obterProvedor();
+  const provedor = obterProvedor(params.instancia);
   if (!provedor || !params.telefonePrestador) return;
 
   const mensagem =
@@ -128,8 +132,9 @@ export async function notificarLembretePrestador(params: {
 export async function notificarCancelamento(params: {
   telefone: string;
   protocolo: string;
+  instancia?: string;
 }): Promise<void> {
-  const provedor = obterProvedor();
+  const provedor = obterProvedor(params.instancia);
   if (!provedor) return;
 
   const mensagem =

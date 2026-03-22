@@ -1,0 +1,29 @@
+version: "3.8"
+
+# Evolution API — WhatsApp para agendei.io
+# Deploy no Railway: https://railway.app
+# 1. Crie novo projeto no Railway
+# 2. "Deploy from Docker Image" → atendai/evolution-api:latest
+# 3. Configure as variáveis de ambiente abaixo
+# 4. Copie a URL gerada pelo Railway para WHATSAPP_API_URL no Render
+
+services:
+  evolution-api:
+    image: atendai/evolution-api:latest
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      # Chave de autenticação (defina um valor secreto)
+      - AUTHENTICATION_TYPE=apikey
+      - AUTHENTICATION_API_KEY=COLOQUE_SUA_CHAVE_SECRETA_AQUI
+
+      # Armazenamento de sessões (use redis em produção)
+      - DATABASE_ENABLED=false
+      - REDIS_ENABLED=false
+
+      # Logs
+      - LOG_LEVEL=ERROR
+
+      # Webhook global (opcional)
+      - WEBHOOK_GLOBAL_ENABLED=false

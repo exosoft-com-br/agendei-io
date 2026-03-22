@@ -10,6 +10,10 @@ export interface WhatsAppMessage {
 export interface WhatsAppProvider {
   parseWebhook(payload: unknown): WhatsAppMessage | null;
   sendMessage(para: string, texto: string): Promise<void>;
+  criarInstancia(instanceName: string, webhookUrl: string): Promise<void>;
+  obterQRCode(instanceName: string): Promise<string | null>;
+  obterStatus(instanceName: string): Promise<"conectado" | "conectando" | "desconectado">;
+  deletarInstancia(instanceName: string): Promise<void>;
 }
 
 export class EvolutionAPIProvider implements WhatsAppProvider {
@@ -62,6 +66,64 @@ export class EvolutionAPIProvider implements WhatsAppProvider {
       { headers: { "Content-Type": "application/json", apikey: this.apiToken } }
     );
   }
+
+  async criarInstancia(instanceName: string, webhookUrl: string): Promise<void> {
+    await axios.post(
+      `${this.apiUrl}/instance/create`,
+      {
+        instanceName,
+        integration: "WHATSAPP-BAILEYS",
+        webhook: {
+          url: webhookUrl,
+          byEvents: true,
+          base64: false,
+          events: ["QRCODE_UPDATED", "CONNECTION_UPDATE"],
+        },
+      },
+      { headers: { "Content-Type": "application/json", apikey: this.apiToken } }
+    );
+  }
+
+  async obterQRCode(instanceName: string): Promise<string | null> {
+    try {
+      const response = await axios.get(
+        `${this.apiUrl}/instance/connect/${instanceName}`,
+        { headers: { apikey: this.apiToken } }
+      );
+      return (response.data?.base64 as string) || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async obterStatus(instanceName: string): Promise<"conectado" | "conectando" | "desconectado"> {
+    try {
+      const response = await axios.get(
+        `${this.apiUrl}/instance/connectionState/${instanceName}`,
+        { headers: { apikey: this.apiToken } }
+      );
+      const state = response.data?.instance?.state as string | undefined;
+      if (state === "open") return "conectado";
+      if (state === "connecting") return "conectando";
+      return "desconectado";
+    } catch {
+      return "desconectado";
+    }
+  }
+
+  async deletarInstancia(instanceName: string): Promise<void> {
+    await axios.delete(
+      `${this.apiUrl}/instance/delete/${instanceName}`,
+      { headers: { apikey: this.apiToken } }
+    );
+  }
+}
+
+export function obterEvolutionProvider(): EvolutionAPIProvider | null {
+  const apiUrl = process.env.WHATSAPP_API_URL;
+  const apiToken = process.env.WHATSAPP_API_TOKEN;
+  if (!apiUrl || !apiToken) return null;
+  return new EvolutionAPIProvider(apiUrl, apiToken);
 }
 
 export function criarProvedorWhatsApp(

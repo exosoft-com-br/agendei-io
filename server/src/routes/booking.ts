@@ -146,42 +146,52 @@ bookingRouter.post("/booking", async (req: Request, res: Response) => {
       .replace("{protocolo}", protocolo)
       .replace("{dataHora}", dataFormatada);
 
-    // Notificação WhatsApp cliente (fire-and-forget)
-    notificarConfirmacao({
-      telefone: clienteTelefone,
-      protocolo,
-      servico: servico.nome,
-      prestador: prestador.nome,
-      nicho: nicho.nome_publico,
-      dataFormatada,
-    }).catch(() => {});
-
-    // Notificação WhatsApp prestador (fire-and-forget)
-    if (prestador.whatsapp_numero) {
-      notificarPrestadorNovoAgendamento({
-        telefonePrestador: prestador.whatsapp_numero,
-        protocolo,
-        clienteNome,
-        servico: servico.nome,
-        dataFormatada,
-      }).catch(() => {});
-    }
-
-    // Registrar/atualizar cliente por negócio (fire-and-forget)
+    // Notificações + registro de cliente (fire-and-forget)
+    // Usa instância WhatsApp do negócio se estiver conectada
     (async () => {
       const { data: negocioRow } = await supabase
         .from("negocios")
-        .select("id")
+        .select("id, whatsapp_instancia, whatsapp_status")
         .eq("nicho_id", nichoId)
         .limit(1)
         .single();
-      if (!negocioRow?.id) return;
-      await supabase.rpc("registrar_cliente_agendamento", {
-        p_negocio_id: negocioRow.id,
-        p_nome: clienteNome,
-        p_telefone: clienteTelefone,
-        p_data_hora: dataHoraObj.toISOString(),
+
+      const instancia = negocioRow?.whatsapp_status === "conectado"
+        ? (negocioRow.whatsapp_instancia ?? undefined)
+        : undefined;
+
+      // Notificar cliente
+      await notificarConfirmacao({
+        telefone: clienteTelefone,
+        protocolo,
+        servico: servico.nome,
+        prestador: prestador.nome,
+        nicho: nicho.nome_publico,
+        dataFormatada,
+        instancia,
       });
+
+      // Notificar prestador
+      if (prestador.whatsapp_numero) {
+        await notificarPrestadorNovoAgendamento({
+          telefonePrestador: prestador.whatsapp_numero,
+          protocolo,
+          clienteNome,
+          servico: servico.nome,
+          dataFormatada,
+          instancia,
+        });
+      }
+
+      // Registrar cliente
+      if (negocioRow?.id) {
+        await supabase.rpc("registrar_cliente_agendamento", {
+          p_negocio_id: negocioRow.id,
+          p_nome: clienteNome,
+          p_telefone: clienteTelefone,
+          p_data_hora: dataHoraObj.toISOString(),
+        });
+      }
     })().catch(() => {});
 
     res.status(201).json({

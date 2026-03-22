@@ -150,6 +150,7 @@ async function carregarNegocios() {
             </div>
             <div class='negocio-actions'>
               <button class='btn btn-outline btn-sm' onclick='editarNegocio("${n.id}")'>Editar</button>
+              <button class='btn btn-outline btn-sm' onclick='mostrarCardWhatsapp("${n.id}")' style='color:#25D366;border-color:#25D366'>📱 WhatsApp</button>
             </div>
           </div>
           <div class='negocio-links' style='margin-top:8px'>
@@ -187,3 +188,95 @@ async function editarNegocio(id) {
 }
 
 carregarNegocios();
+
+// ─── WhatsApp ──────────────────────────────────────────────────────────────────
+
+let whatsappNegocioId = null;
+let pollInterval = null;
+
+function mostrarCardWhatsapp(negocioId) {
+  whatsappNegocioId = negocioId;
+  document.getElementById('cardWhatsapp').style.display = 'block';
+  document.getElementById('cardWhatsapp').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  verificarStatusWhatsapp();
+}
+
+async function verificarStatusWhatsapp() {
+  if (!whatsappNegocioId) return;
+  try {
+    const data = await apiFetch(`/negocio/${whatsappNegocioId}/whatsapp/status`);
+    atualizarUIWhatsapp(data.status, data.qrcode);
+  } catch (e) {
+    console.error('Erro ao verificar status WhatsApp', e);
+  }
+}
+
+function atualizarUIWhatsapp(status, qrcode) {
+  const divConectado     = document.getElementById('whatsappConectado');
+  const divDesconectado  = document.getElementById('whatsappDesconectado');
+  const divConectando    = document.getElementById('whatsappConectando');
+  const divInicial       = document.getElementById('whatsappInicial');
+  const statusPoll       = document.getElementById('statusPoll');
+
+  if (status === 'conectado') {
+    divConectado.style.display = 'block';
+    divDesconectado.style.display = 'none';
+    pararPoll();
+    return;
+  }
+
+  divConectado.style.display = 'none';
+  divDesconectado.style.display = 'block';
+
+  if (status === 'conectando' && qrcode) {
+    divInicial.style.display = 'none';
+    divConectando.style.display = 'block';
+    document.getElementById('qrcodeImg').src = qrcode;
+    if (statusPoll) statusPoll.textContent = 'Aguardando leitura do QR Code...';
+    iniciarPoll();
+  } else {
+    divInicial.style.display = 'block';
+    divConectando.style.display = 'none';
+    pararPoll();
+  }
+}
+
+async function conectarWhatsapp() {
+  if (!whatsappNegocioId) return;
+  try {
+    const data = await apiFetch(`/negocio/${whatsappNegocioId}/whatsapp/conectar`, { method: 'POST' });
+    if (data.erro) { alert(data.erro); return; }
+    atualizarUIWhatsapp('conectando', data.qrcode);
+  } catch (e) {
+    alert('Erro ao iniciar conexão WhatsApp. Verifique se o servidor está configurado.');
+  }
+}
+
+async function gerarQRCode() {
+  await conectarWhatsapp();
+}
+
+async function desconectarWhatsapp() {
+  if (!whatsappNegocioId || !confirm('Deseja desconectar o WhatsApp deste negócio?')) return;
+  try {
+    await apiFetch(`/negocio/${whatsappNegocioId}/whatsapp/desconectar`, { method: 'DELETE' });
+    atualizarUIWhatsapp('desconectado', null);
+  } catch (e) {
+    alert('Erro ao desconectar.');
+  }
+}
+
+function iniciarPoll() {
+  if (pollInterval) return;
+  pollInterval = setInterval(async () => {
+    if (!whatsappNegocioId) return;
+    try {
+      const data = await apiFetch(`/negocio/${whatsappNegocioId}/whatsapp/status`);
+      atualizarUIWhatsapp(data.status, data.qrcode);
+    } catch {}
+  }, 5000);
+}
+
+function pararPoll() {
+  if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+}
